@@ -1,0 +1,6 @@
+[submodule "SM64LuaRedux"]
+	path = SM64LuaRedux
+	url = https://github.com/mupen64/SM64LuaRedux
+[submodule "sm64-viz"]
+	path = sm64-viz
+	url = https://github.com/mupen64/sm64-viz
