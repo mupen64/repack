@@ -1,0 +1,19 @@
+name: Sync sm64-viz
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    uses: mupen64/.github/.github/workflows/sync-source-folder.yml@main
+    with:
+      repo: mupen64/sm64-viz
+      branch: main
+      folder: sm64-viz
+      state_file: .github/sync-state/sm64-viz.txt
+    secrets: inherit
