@@ -50,10 +50,15 @@ jobs:
           ASSET_URL=$(gh api \
             "repos/mupen64/mupen64-rr-lua/releases/latest" \
             --jq '.assets[] | select(.name | startswith("${{ inputs.asset }}")) | .browser_download_url')
-          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          if [ -n "$ASSET_URL" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download and unpack mupen64 stable release
-        if: inputs.mode == 'stable'
+        if: inputs.mode == 'stable' && steps.get-release.outputs.found == 'true'
         run: |
           curl -fsSL "${{ steps.get-release.outputs.asset_url }}" -o mupen64-stable.zip
           mkdir -p _mupen64tmp
@@ -71,10 +76,15 @@ jobs:
           RUN_ID=$(gh api \
             "repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=1" \
             --jq '.artifacts[0].workflow_run.id')
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download mupen64 nightly artifact
-        if: inputs.mode == 'nightly'
+        if: inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -91,7 +101,7 @@ jobs:
 
       - name: Get latest SM64LuaRedux release tag
         id: get-sm64-tag
-        if: inputs.mode == 'stable'
+        if: inputs.mode == 'stable' && steps.get-release.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -101,7 +111,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Download and unpack SM64LuaRedux stable release
-        if: inputs.mode == 'stable'
+        if: inputs.mode == 'stable' && steps.get-release.outputs.found == 'true'
         run: |
           curl -fsSL \
             "https://github.com/mupen64/SM64LuaRedux/archive/refs/tags/${{ steps.get-sm64-tag.outputs.tag }}.zip" \
@@ -115,14 +125,14 @@ jobs:
           rm -rf _sm64stabletmp sm64luaredux-stable.zip
 
       - name: Download SM64LuaRedux source
-        if: inputs.mode == 'nightly'
+        if: inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true'
         run: |
           curl -fsSL \
             "https://github.com/mupen64/SM64LuaRedux/archive/refs/heads/main.zip" \
             -o sm64luaredux.zip
 
       - name: Unpack SM64LuaRedux
-        if: inputs.mode == 'nightly'
+        if: inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true'
         run: |
           mkdir -p ${{ inputs.dir }}/SM64LuaRedux
           unzip -o sm64luaredux.zip -d _sm64tmp
@@ -130,9 +140,22 @@ jobs:
           cp -rf _sm64tmp/SM64LuaRedux-main/. ${{ inputs.dir }}/SM64LuaRedux/
           rm -rf _sm64tmp sm64luaredux.zip
 
+      # Asset not found: wipe the branch instead of leaving stale content
+
+      - name: Remove all branch files (asset not found)
+        if: (inputs.mode == 'stable' && steps.get-release.outputs.found != 'true') || (inputs.mode == 'nightly' && steps.get-run.outputs.found != 'true')
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git rm -rf --ignore-unmatch .
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "${{ inputs.commit-message }}"
+          git push origin ${{ inputs.target }}
+
       # Commit & push
 
       - name: Commit and push changes
+        if: (inputs.mode == 'stable' && steps.get-release.outputs.found == 'true') || (inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true')
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
