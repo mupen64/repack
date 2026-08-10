@@ -14,7 +14,7 @@ on:
       asset:
         description: >
           For stable mode, the mupen64-rr-lua release asset name prefix
-          (e.g. mupen-w32). For nightly mode, the artifact name
+          (e.g. mupen64-w32). For nightly mode, the artifact name
           (e.g. mupen-release-nightly-w32).
         type: string
         required: true

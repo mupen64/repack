@@ -14,7 +14,7 @@ jobs:
     with:
       target: stable-w32
       mode: stable
-      asset: mupen-w32
+      asset: mupen64-w32
       dir: stable
       commit-message: "chore: sync stable releases [skip ci]"
 
@@ -23,7 +23,7 @@ jobs:
     with:
       target: stable-w64
       mode: stable
-      asset: mupen-w64
+      asset: mupen64-w64
       dir: stable
       commit-message: "chore: sync stable releases [skip ci]"
 
