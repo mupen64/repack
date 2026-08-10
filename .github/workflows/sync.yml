@@ -16,7 +16,6 @@ jobs:
       mode: stable
       asset: mupen64-w32
       fallback-asset: mupen64.zip
-      dir: stable
       commit-message: "chore: sync stable releases [skip ci]"
 
   sync-stable-w64:
@@ -25,7 +24,6 @@ jobs:
       target: stable-w64
       mode: stable
       asset: mupen64-w64
-      dir: stable
       commit-message: "chore: sync stable releases [skip ci]"
 
   sync-nightly-w32:
@@ -34,7 +32,6 @@ jobs:
       target: nightly-w32
       mode: nightly
       asset: mupen-release-nightly-w32
-      dir: nightly
       commit-message: "chore: sync [skip ci]"
 
   sync-nightly-w64:
@@ -43,5 +40,4 @@ jobs:
       target: nightly-w64
       mode: nightly
       asset: mupen-release-nightly-w64
-      dir: nightly
       commit-message: "chore: sync [skip ci]"

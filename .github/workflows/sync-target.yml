@@ -26,10 +26,6 @@ on:
           is used.
         type: string
         required: false
-      dir:
-        description: Directory under which the synced content is committed
-        type: string
-        required: true
       commit-message:
         description: Commit message to use when there are changes
         type: string
@@ -46,6 +42,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target }}
+
+      - name: Clear branch contents
+        run: |
+          # The branch is rebuilt from scratch on each sync, so drop everything first
+          git rm -rf --ignore-unmatch .
 
       # Mupen64
 
@@ -81,8 +82,7 @@ jobs:
           curl -fsSL "${{ steps.get-release.outputs.asset_url }}" -o mupen64-stable.zip
           mkdir -p _mupen64tmp
           unzip -o mupen64-stable.zip -d _mupen64tmp
-          mkdir -p ${{ inputs.dir }}
-          cp -rf _mupen64tmp/release-artifact/. ${{ inputs.dir }}/
+          cp -rf _mupen64tmp/release-artifact/. .
           rm -rf _mupen64tmp mupen64-stable.zip
 
       - name: Get latest mupen64-rr-lua run ID
@@ -111,8 +111,7 @@ jobs:
             --repo mupen64/mupen64-rr-lua \
             --name "${{ inputs.asset }}" \
             --dir _nightlytmp
-          mkdir -p ${{ inputs.dir }}
-          cp -rf _nightlytmp/. ${{ inputs.dir }}/
+          cp -rf _nightlytmp/. .
           rm -rf _nightlytmp
 
       # SM64LuaRedux
@@ -136,10 +135,10 @@ jobs:
             -o sm64luaredux-stable.zip
           mkdir -p _sm64stabletmp
           unzip -o sm64luaredux-stable.zip -d _sm64stabletmp
-          mkdir -p ${{ inputs.dir }}/SM64LuaRedux
+          mkdir -p SM64LuaRedux
           # The zip extracts to a single top-level folder; move its contents into place
           TOP=$(ls _sm64stabletmp/)
-          cp -rf "_sm64stabletmp/$TOP/." ${{ inputs.dir }}/SM64LuaRedux/
+          cp -rf "_sm64stabletmp/$TOP/." SM64LuaRedux/
           rm -rf _sm64stabletmp sm64luaredux-stable.zip
 
       - name: Download SM64LuaRedux source
@@ -152,10 +151,10 @@ jobs:
       - name: Unpack SM64LuaRedux
         if: inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true'
         run: |
-          mkdir -p ${{ inputs.dir }}/SM64LuaRedux
+          mkdir -p SM64LuaRedux
           unzip -o sm64luaredux.zip -d _sm64tmp
           # The zip extracts to SM64LuaRedux-main/; copy its contents into place
-          cp -rf _sm64tmp/SM64LuaRedux-main/. ${{ inputs.dir }}/SM64LuaRedux/
+          cp -rf _sm64tmp/SM64LuaRedux-main/. SM64LuaRedux/
           rm -rf _sm64tmp sm64luaredux.zip
 
       # Asset not found: wipe the branch instead of leaving stale content
@@ -177,7 +176,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ${{ inputs.dir }}/
+          git add .
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "${{ inputs.commit-message }}"
           git push origin ${{ inputs.target }}
