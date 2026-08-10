@@ -59,9 +59,11 @@ jobs:
           RELEASE_API="repos/mupen64/mupen64-rr-lua/releases/latest"
           ASSET_URL=$(gh api "$RELEASE_API" \
             --jq '.assets[] | select(.name | startswith("${{ inputs.asset }}")) | .browser_download_url')
+          RELEASE_URL=$(gh api "$RELEASE_API" --jq '.html_url')
           if [ -n "$ASSET_URL" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
             echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+            echo "mupen64_link=$RELEASE_URL" >> "$GITHUB_OUTPUT"
           elif [ -n "${{ inputs.fallback-asset }}" ]; then
             FALLBACK_URL=$(gh api "$RELEASE_API" \
               --jq '.assets[] | select(.name == "${{ inputs.fallback-asset }}") | .browser_download_url')
@@ -69,6 +71,7 @@ jobs:
               echo "::warning::FALLBACK USED: mupen64 asset '${{ inputs.asset }}' was not found in the latest release. Falling back to '${{ inputs.fallback-asset }}'. THIS MAY BE AN OUTDATED OR INCORRECT BUILD - verify the upstream release manually!"
               echo "found=true" >> "$GITHUB_OUTPUT"
               echo "asset_url=$FALLBACK_URL" >> "$GITHUB_OUTPUT"
+              echo "mupen64_link=$RELEASE_URL" >> "$GITHUB_OUTPUT"
             else
               echo "found=false" >> "$GITHUB_OUTPUT"
             fi
@@ -91,12 +94,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RUN_ID=$(gh api \
-            "repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=1" \
+          ARTIFACTS_API="repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=1"
+          RUN_ID=$(gh api "$ARTIFACTS_API" \
             --jq '.artifacts[0].workflow_run.id')
           if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+            HEAD_SHA=$(gh api "repos/mupen64/mupen64-rr-lua/actions/runs/$RUN_ID" \
+              --jq '.head_sha')
             echo "found=true" >> "$GITHUB_OUTPUT"
             echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+            echo "mupen64_link=https://github.com/mupen64/mupen64-rr-lua/commit/$HEAD_SHA" >> "$GITHUB_OUTPUT"
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
@@ -125,7 +131,22 @@ jobs:
           TAG=$(gh api \
             "repos/mupen64/SM64LuaRedux/releases/latest" \
             --jq '.tag_name')
+          RELEASE_URL=$(gh api \
+            "repos/mupen64/SM64LuaRedux/releases/latest" \
+            --jq '.html_url')
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sm64_link=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Get SM64LuaRedux main commit
+        id: get-sm64-head
+        if: inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HEAD_SHA=$(gh api \
+            "repos/mupen64/SM64LuaRedux/commits/main" \
+            --jq '.sha')
+          echo "sm64_link=https://github.com/mupen64/SM64LuaRedux/commit/$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Download and unpack SM64LuaRedux stable release
         if: inputs.mode == 'stable' && steps.get-release.outputs.found == 'true'
@@ -156,6 +177,27 @@ jobs:
           # The zip extracts to SM64LuaRedux-main/; copy its contents into place
           cp -rf _sm64tmp/SM64LuaRedux-main/. SM64LuaRedux/
           rm -rf _sm64tmp sm64luaredux.zip
+
+      # LICENSE & README
+
+      - name: Copy LICENSE from main
+        if: (inputs.mode == 'stable' && steps.get-release.outputs.found == 'true') || (inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true')
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/main/LICENSE" -o LICENSE
+
+      - name: Generate README
+        if: (inputs.mode == 'stable' && steps.get-release.outputs.found == 'true') || (inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true')
+        run: |
+          cat > README.md <<'EOF'
+          # Mupen64 Repack
+
+          This is the Mupen64 ${{ inputs.mode }} repack, consisting of
+
+          - Mupen64 @ ${{ steps.get-release.outputs.mupen64_link || steps.get-run.outputs.mupen64_link }}
+          - SM64 Lua Redux @ ${{ steps.get-sm64-tag.outputs.sm64_link || steps.get-sm64-head.outputs.sm64_link }}
+
+          Update at https://mupen64.com.
+          EOF
 
       # Asset not found: wipe the branch instead of leaving stale content
 
