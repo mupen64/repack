@@ -15,6 +15,7 @@ jobs:
       target: stable-w32
       mode: stable
       asset: mupen64-w32
+      fallback-asset: mupen64.zip
       dir: stable
       commit-message: "chore: sync stable releases [skip ci]"
 

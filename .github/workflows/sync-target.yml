@@ -18,6 +18,14 @@ on:
           (e.g. mupen-release-nightly-w32).
         type: string
         required: true
+      fallback-asset:
+        description: >
+          For stable mode, the exact name of an alternative release asset
+          (e.g. mupen64.zip) to fall back to when the primary asset is not
+          found in the latest release. A warning is emitted when the fallback
+          is used.
+        type: string
+        required: false
       dir:
         description: Directory under which the synced content is committed
         type: string
@@ -47,12 +55,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ASSET_URL=$(gh api \
-            "repos/mupen64/mupen64-rr-lua/releases/latest" \
+          RELEASE_API="repos/mupen64/mupen64-rr-lua/releases/latest"
+          ASSET_URL=$(gh api "$RELEASE_API" \
             --jq '.assets[] | select(.name | startswith("${{ inputs.asset }}")) | .browser_download_url')
           if [ -n "$ASSET_URL" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
             echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ inputs.fallback-asset }}" ]; then
+            FALLBACK_URL=$(gh api "$RELEASE_API" \
+              --jq '.assets[] | select(.name == "${{ inputs.fallback-asset }}") | .browser_download_url')
+            if [ -n "$FALLBACK_URL" ]; then
+              echo "::warning::FALLBACK USED: mupen64 asset '${{ inputs.asset }}' was not found in the latest release. Falling back to '${{ inputs.fallback-asset }}'. THIS MAY BE AN OUTDATED OR INCORRECT BUILD - verify the upstream release manually!"
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              echo "asset_url=$FALLBACK_URL" >> "$GITHUB_OUTPUT"
+            else
+              echo "found=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
