@@ -1,0 +1,142 @@
+name: Sync target branch
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: Branch to sync and push to
+        type: string
+        required: true
+      mode:
+        description: 'stable (release-based) or nightly (artifact-based)'
+        type: string
+        required: true
+      asset:
+        description: >
+          For stable mode, the mupen64-rr-lua release asset name prefix
+          (e.g. mupen-w32). For nightly mode, the artifact name
+          (e.g. mupen-release-nightly-w32).
+        type: string
+        required: true
+      dir:
+        description: Directory under which the synced content is committed
+        type: string
+        required: true
+      commit-message:
+        description: Commit message to use when there are changes
+        type: string
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target }}
+
+      # Mupen64
+
+      - name: Get latest mupen64-rr-lua release
+        id: get-release
+        if: inputs.mode == 'stable'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ASSET_URL=$(gh api \
+            "repos/mupen64/mupen64-rr-lua/releases/latest" \
+            --jq '.assets[] | select(.name | startswith("${{ inputs.asset }}")) | .browser_download_url')
+          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Download and unpack mupen64 stable release
+        if: inputs.mode == 'stable'
+        run: |
+          curl -fsSL "${{ steps.get-release.outputs.asset_url }}" -o mupen64-stable.zip
+          mkdir -p _mupen64tmp
+          unzip -o mupen64-stable.zip -d _mupen64tmp
+          mkdir -p ${{ inputs.dir }}
+          cp -rf _mupen64tmp/release-artifact/. ${{ inputs.dir }}/
+          rm -rf _mupen64tmp mupen64-stable.zip
+
+      - name: Get latest mupen64-rr-lua run ID
+        id: get-run
+        if: inputs.mode == 'nightly'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh api \
+            "repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=1" \
+            --jq '.artifacts[0].workflow_run.id')
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download mupen64 nightly artifact
+        if: inputs.mode == 'nightly'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p _nightlytmp
+          gh run download ${{ steps.get-run.outputs.run_id }} \
+            --repo mupen64/mupen64-rr-lua \
+            --name "${{ inputs.asset }}" \
+            --dir _nightlytmp
+          mkdir -p ${{ inputs.dir }}
+          cp -rf _nightlytmp/. ${{ inputs.dir }}/
+          rm -rf _nightlytmp
+
+      # SM64LuaRedux
+
+      - name: Get latest SM64LuaRedux release tag
+        id: get-sm64-tag
+        if: inputs.mode == 'stable'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh api \
+            "repos/mupen64/SM64LuaRedux/releases/latest" \
+            --jq '.tag_name')
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Download and unpack SM64LuaRedux stable release
+        if: inputs.mode == 'stable'
+        run: |
+          curl -fsSL \
+            "https://github.com/mupen64/SM64LuaRedux/archive/refs/tags/${{ steps.get-sm64-tag.outputs.tag }}.zip" \
+            -o sm64luaredux-stable.zip
+          mkdir -p _sm64stabletmp
+          unzip -o sm64luaredux-stable.zip -d _sm64stabletmp
+          mkdir -p ${{ inputs.dir }}/SM64LuaRedux
+          # The zip extracts to a single top-level folder; move its contents into place
+          TOP=$(ls _sm64stabletmp/)
+          cp -rf "_sm64stabletmp/$TOP/." ${{ inputs.dir }}/SM64LuaRedux/
+          rm -rf _sm64stabletmp sm64luaredux-stable.zip
+
+      - name: Download SM64LuaRedux source
+        if: inputs.mode == 'nightly'
+        run: |
+          curl -fsSL \
+            "https://github.com/mupen64/SM64LuaRedux/archive/refs/heads/main.zip" \
+            -o sm64luaredux.zip
+
+      - name: Unpack SM64LuaRedux
+        if: inputs.mode == 'nightly'
+        run: |
+          mkdir -p ${{ inputs.dir }}/SM64LuaRedux
+          unzip -o sm64luaredux.zip -d _sm64tmp
+          # The zip extracts to SM64LuaRedux-main/; copy its contents into place
+          cp -rf _sm64tmp/SM64LuaRedux-main/. ${{ inputs.dir }}/SM64LuaRedux/
+          rm -rf _sm64tmp sm64luaredux.zip
+
+      # Commit & push
+
+      - name: Commit and push changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ${{ inputs.dir }}/
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "${{ inputs.commit-message }}"
+          git push origin ${{ inputs.target }}

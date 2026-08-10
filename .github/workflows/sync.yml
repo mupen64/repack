@@ -1,0 +1,63 @@
+name: Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  sync-stable-w32:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Sync stable w32
+        uses: ./.github/workflows/sync-target.yml
+        with:
+          target: stable-w32
+          mode: stable
+          asset: mupen-w32
+          dir: stable
+          commit-message: "chore: sync stable releases [skip ci]"
+
+  sync-stable-w64:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Sync stable w64
+        uses: ./.github/workflows/sync-target.yml
+        with:
+          target: stable-w64
+          mode: stable
+          asset: mupen-w64
+          dir: stable
+          commit-message: "chore: sync stable releases [skip ci]"
+
+  sync-nightly-w32:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Sync nightly w32
+        uses: ./.github/workflows/sync-target.yml
+        with:
+          target: nightly-w32
+          mode: nightly
+          asset: mupen-release-nightly-w32
+          dir: nightly
+          commit-message: "chore: sync [skip ci]"
+
+  sync-nightly-w64:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Sync nightly w64
+        uses: ./.github/workflows/sync-target.yml
+        with:
+          target: nightly-w64
+          mode: nightly
+          asset: mupen-release-nightly-w64
+          dir: nightly
+          commit-message: "chore: sync [skip ci]"
