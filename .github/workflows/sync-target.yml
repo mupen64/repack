@@ -85,7 +85,13 @@ jobs:
           curl -fsSL "${{ steps.get-release.outputs.asset_url }}" -o mupen64-stable.zip
           mkdir -p _mupen64tmp
           unzip -o mupen64-stable.zip -d _mupen64tmp
-          cp -rf _mupen64tmp/release-artifact/. .
+          # The zip may wrap the release in a single top-level folder; unwrap it if so
+          TOP=$(ls -1 _mupen64tmp/)
+          if [ "$(printf '%s\n' "$TOP" | wc -l)" -eq 1 ] && [ -d "_mupen64tmp/$TOP" ]; then
+            cp -rf "_mupen64tmp/$TOP/." .
+          else
+            cp -rf _mupen64tmp/. .
+          fi
           rm -rf _mupen64tmp mupen64-stable.zip
 
       - name: Get latest mupen64-rr-lua run ID
@@ -117,7 +123,13 @@ jobs:
             --repo mupen64/mupen64-rr-lua \
             --name "${{ inputs.asset }}" \
             --dir _nightlytmp
-          cp -rf _nightlytmp/. .
+          # If the artifact wraps the release in a single top-level folder, unwrap it; otherwise copy as-is
+          TOP=$(ls -1 _nightlytmp/)
+          if [ "$(printf '%s\n' "$TOP" | wc -l)" -eq 1 ] && [ -d "_nightlytmp/$TOP" ]; then
+            cp -rf "_nightlytmp/$TOP/." .
+          else
+            cp -rf _nightlytmp/. .
+          fi
           rm -rf _nightlytmp
 
       # SM64LuaRedux
