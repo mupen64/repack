@@ -9,35 +9,42 @@ permissions:
   contents: write
 
 jobs:
-  sync-stable-w32:
+  sync-stable:
+    strategy:
+      matrix:
+        platform:
+          - windows-x86
+          - windows-x64
+        include:
+          - platform: windows-x86
+            old_name: mupen64-w32
+          - platform: windows-x64
+            old_name: mupen64-w64
+
     uses: ./.github/workflows/sync-target.yml
     with:
-      target: stable-w32
+      target: stable-${{ matrix.platform }}
       mode: stable
-      asset: mupen64-w32
-      fallback-asset: mupen64.zip
+      asset: mupen64-${{ matrix.platform }}
+      fallback-asset: ${{ matrix.old_name }}
       commit-message: "chore: sync stable releases [skip ci]"
 
-  sync-stable-w64:
-    uses: ./.github/workflows/sync-target.yml
-    with:
-      target: stable-w64
-      mode: stable
-      asset: mupen64-w64
-      commit-message: "chore: sync stable releases [skip ci]"
+  sync-nightly:
+    strategy:
+      matrix:
+        platform:
+          - windows-x86
+          - windows-x64
+        include:
+          - platform: windows-x86
+            old_name: mupen-release-nightly-w32
+          - platform: windows-x64
+            old_name: mupen-release-nightly-w64
 
-  sync-nightly-w32:
     uses: ./.github/workflows/sync-target.yml
     with:
-      target: nightly-w32
+      target: nightly-${{ matrix.platform }}
       mode: nightly
-      asset: mupen-release-nightly-w32
-      commit-message: "chore: sync [skip ci]"
-
-  sync-nightly-w64:
-    uses: ./.github/workflows/sync-target.yml
-    with:
-      target: nightly-w64
-      mode: nightly
-      asset: mupen-release-nightly-w64
+      asset: mupen64-release-nightly-${{ matrix.platform }}
+      fallback-asset: ${{ matrix.old_name }}
       commit-message: "chore: sync [skip ci]"
