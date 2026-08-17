@@ -105,8 +105,7 @@ jobs:
             --jq '.sha')
           ARTIFACTS_API="repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=100"
           RUN_IDS=$(gh api "$ARTIFACTS_API" --paginate \
-            --jq --arg main_sha "$MAIN_SHA" \
-            '.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main" and .workflow_run.head_sha == $main_sha) | .workflow_run.id')
+            --jq ".artifacts[] | select(.expired == false and .workflow_run.head_branch == \"main\" and .workflow_run.head_sha == \"$MAIN_SHA\") | .workflow_run.id")
           RUN_ID="${RUN_IDS%%$'\n'*}"
           if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
