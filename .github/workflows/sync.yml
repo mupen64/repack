@@ -25,7 +25,7 @@ jobs:
     with:
       target: stable-${{ matrix.platform }}
       mode: stable
-      asset: mupen64-${{ matrix.platform }}.zip
+      asset: mupen-${{ matrix.platform }}.zip
       fallback-asset: ${{ matrix.old_name }}
       commit-message: "chore: sync stable releases [skip ci]"
 
@@ -45,6 +45,6 @@ jobs:
     with:
       target: nightly-${{ matrix.platform }}
       mode: nightly
-      asset: mupen64-release-nightly-${{ matrix.platform }}
+      asset: mupen-release-nightly-${{ matrix.platform }}
       fallback-asset: ${{ matrix.old_name }}
       commit-message: "chore: sync [skip ci]"
