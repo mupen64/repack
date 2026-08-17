@@ -1,0 +1,91 @@
+--
+-- Copyright (c) 2025, Mupen64 maintainers.
+--
+-- SPDX-License-Identifier: GPL-2.0-or-later
+--
+
+local UID = dofile(views_path .. "SemanticWorkflow/SharedUIDs.lua")
+
+return {
+    GetDialog = function(key)
+        local page = 1
+        local help = Locales.raw()['SEMANTIC_WORKFLOW_HELP_EXPLANATIONS'][key];
+        local pages = help.PAGES
+        local title = help.HEADING
+        return function()
+            local theme = Styles.theme()
+            local foreground_color = theme.listbox_item.text[1]
+
+            local top = 0
+            local button_position = grid_rect(7, 0, 1, 1)
+            if ugui.button(
+                    {
+                        uid = UID.ToggleHelp,
+                        rectangle = button_position,
+                        text = '[icon:navigate_back]',
+                        tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_EXIT_TOOL_TIP'),
+                        styler_mixin = { icon_size = 12 },
+                    }
+                ) then
+                SemanticWorkflowDialog = nil
+            end
+
+            ugui.label({
+                uid = UID.HelpTitle,
+                rectangle = grid_rect(0, 0.1, 8, 1),
+                text = title,
+                color = foreground_color,
+                font_size = theme.font_size * 1.2 * Drawing.scale,
+                font_name = theme.font_name,
+                align_x = BreitbandGraphics.alignment.start,
+                align_y = BreitbandGraphics.alignment.start,
+            })
+            ugui.label({
+                uid = UID.HelpPageHeading,
+                rectangle = grid_rect(0, 0.666, 8, 1),
+                text = pages[page]['HEADING'],
+                color = foreground_color,
+                font_size = theme.font_size * 2 * Drawing.scale,
+                font_name = theme.font_name,
+                align_x = BreitbandGraphics.alignment.start,
+                align_y = BreitbandGraphics.alignment.start,
+            })
+            ugui.label({
+                uid = UID.HelpPageText,
+                rectangle = grid_rect(0, 1.8, 8, 1),
+                text = pages[page]['TEXT'],
+                color = foreground_color,
+                font_size = theme.font_size * Drawing.scale,
+                font_name = theme.font_name,
+                align_x = BreitbandGraphics.alignment.start,
+                align_y = BreitbandGraphics.alignment.start,
+            })
+
+            if ugui.button(
+                    {
+                        uid = UID.HelpBack,
+                        rectangle = grid_rect(6, top, 0.5, 1),
+                        text = '[icon:previous_page]',
+                        is_enabled = page > 1,
+                        tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_PREV_PAGE'),
+                        styler_mixin = { icon_size = 12 },
+                    }
+                ) then
+                page = page - 1
+            end
+
+            if ugui.button(
+                    {
+                        uid = UID.HelpNext,
+                        rectangle = grid_rect(6.5, top, 0.5, 1),
+                        text = '[icon:next_page]',
+                        is_enabled = page < #pages,
+                        tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_NEXT_PAGE'),
+                        styler_mixin = { icon_size = 12 },
+                    }
+                ) then
+                page = page + 1
+            end
+        end
+    end,
+}
