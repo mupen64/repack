@@ -94,21 +94,24 @@ jobs:
           fi
           rm -rf _mupen64tmp mupen64-stable.zip
 
-      - name: Get latest mupen64-rr-lua run ID
+      - name: Get latest mupen64-rr-lua main artifact run ID
         id: get-run
         if: inputs.mode == 'nightly'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ARTIFACTS_API="repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=1"
-          RUN_ID=$(gh api "$ARTIFACTS_API" \
-            --jq '.artifacts[0].workflow_run.id')
+          MAIN_SHA=$(gh api \
+            "repos/mupen64/mupen64-rr-lua/commits/main" \
+            --jq '.sha')
+          ARTIFACTS_API="repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=100"
+          RUN_IDS=$(gh api "$ARTIFACTS_API" --paginate \
+            --jq --arg main_sha "$MAIN_SHA" \
+            '.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main" and .workflow_run.head_sha == $main_sha) | .workflow_run.id')
+          RUN_ID="${RUN_IDS%%$'\n'*}"
           if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-            HEAD_SHA=$(gh api "repos/mupen64/mupen64-rr-lua/actions/runs/$RUN_ID" \
-              --jq '.head_sha')
             echo "found=true" >> "$GITHUB_OUTPUT"
             echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-            echo "mupen64_link=https://github.com/mupen64/mupen64-rr-lua/commit/$HEAD_SHA" >> "$GITHUB_OUTPUT"
+            echo "mupen64_link=https://github.com/mupen64/mupen64-rr-lua/commit/$MAIN_SHA" >> "$GITHUB_OUTPUT"
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
