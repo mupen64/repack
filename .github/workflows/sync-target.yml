@@ -100,17 +100,34 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          MAIN_SHA=$(gh api \
-            "repos/mupen64/mupen64-rr-lua/commits/main" \
-            --jq '.sha')
-          ARTIFACTS_API="repos/mupen64/mupen64-rr-lua/actions/artifacts?name=${{ inputs.asset }}&per_page=100"
-          RUN_IDS=$(gh api "$ARTIFACTS_API" --paginate \
-            --jq ".artifacts[] | select(.expired == false and .workflow_run.head_branch == \"main\" and .workflow_run.head_sha == \"$MAIN_SHA\") | .workflow_run.id")
-          RUN_ID="${RUN_IDS%%$'\n'*}"
+          REPO="mupen64/mupen64-rr-lua"
+          ARTIFACTS_API="repos/$REPO/actions/artifacts?name=${{ inputs.asset }}&per_page=100"
+
+          # Primary: push workflows on main
+          MAIN_SHA=$(gh api "repos/$REPO/commits/main" --jq '.sha')
+          RUN_ID=$(gh api "$ARTIFACTS_API" --paginate \
+            --jq ".artifacts[] | select(.expired == false and .workflow_run.head_branch == \"main\" and .workflow_run.head_sha == \"$MAIN_SHA\") | .workflow_run.id" \
+            | head -n 1)
+
+          # Fallback: workflow_dispatch workflows on main
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::warning::No nightly artifact found for main HEAD $MAIN_SHA; falling back to the most recent artifact from any main run"
+            read -r RUN_ID HEAD_SHA <<EOF2
+          $(gh api "$ARTIFACTS_API" --paginate \
+            --jq '.artifacts[]
+              | select(.expired == false and .workflow_run.head_branch == "main")
+              | [.workflow_run.id, .workflow_run.head_sha]
+              | @tsv' \
+            | head -n 1)
+          EOF2
+          else
+            HEAD_SHA="$MAIN_SHA"
+          fi
+
           if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
             echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-            echo "mupen64_link=https://github.com/mupen64/mupen64-rr-lua/commit/$MAIN_SHA" >> "$GITHUB_OUTPUT"
+            echo "mupen64_link=https://github.com/$REPO/commit/$HEAD_SHA" >> "$GITHUB_OUTPUT"
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
