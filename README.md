@@ -2,7 +2,7 @@
 
 This is the Mupen64 nightly repack, consisting of
 
-- Mupen64 @ https://github.com/mupen64/mupen64-rr-lua/commit/a4db4ac5e6f450663016b211145badcce073db67
+- Mupen64 @ https://github.com/mupen64/mupen64-rr-lua/commit/ffdef4ea800da04319cc906a52e71dc6eec5f59a
 - SM64 Lua Redux @ https://github.com/mupen64/SM64LuaRedux/commit/4adaedc2d7f602c36cc413994d7887b1b0e6401f
 
 Update at https://mupen64.com.
