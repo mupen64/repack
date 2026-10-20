@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 HOTKEY_MODE_ONESHOT = 0
@@ -16,9 +16,10 @@ function NewTASState()
         manual_joystick_x = 0,
         manual_joystick_y = 0,
         goal_angle = 0,
-        goal_mag = 127,
+        goal_mag = 64,
         strain_always = false,
-        high_magnitude = false,
+        maximize_airspeed = false,
+        dustless_walk = false,
         strain_left = true,
         strain_right = false,
         dyaw = false,
@@ -29,6 +30,7 @@ function NewTASState()
         reverse_arc = false,
         atan_start = 0,
         atan_r = 1.0,
+        atan_readonly_r = nil,
         atan_d = 0.0,
         atan_n = 10,
     }
@@ -41,7 +43,6 @@ Settings = {
     override_rng_use_index = false,
     override_rng_value = 0,
     show_effective_angles = true,
-    ghost_path = folder .. 'recording.ghost',
     grid_size = 35,
     grid_gap = 2,
     track_moved_distance = false,
@@ -57,13 +58,37 @@ Settings = {
     atan_exp = 0,
     format_decimal_points = 4,
     format_angles_degrees = false,
+    format_angles_hau = false,
     worldviz_enabled = false,
     truncate_effective_angle = false,
-    active_style_index = 2,
+    active_style_index = 0,
+    light_style_index = 1,
+    dark_style_index = 2,
     locale_index = 1,
     tab_index = 1,
     navbar_visible = true,
+    settings_scroll_offset = 0,
+    settings_visuals_expanded = true,
+    settings_interaction_expanded = true,
+    settings_memory_expanded = true,
+    settings_varwatch_expanded = true,
     settings_tab_index = 1,
+    ghost_path = folder .. 'recording.ghost',
+    ghost_tab_index = 1,
+    ghost_transparent_default = false,
+    ghost_recording_auto_load = true,
+    ghost_playback_warning_accepted = false,
+    ghost_overlay_data = false,
+    ghost_disable_body_movement = false,
+    ghost_recording_highlight_color = {255, 0, 0},
+    ghost_recorded_variables = {
+        action = false,
+        rng = false,
+        h_spd = false,
+        v_spd = false,
+        spd_efficiency = false,
+        yaw_intended = false,
+    },
     autodetect_address = true,
     auto_firsties = false,
     mini_visualizer = false,
@@ -73,6 +98,7 @@ Settings = {
     dump_start_frame = 0,
     dump_movie_start_frame = 0,
     notification_style = NOTIFICATION_STYLE_BUBBLE,
+    animations = 'system',
     hotkeys_enabled = true,
     hotkeys_assigning = false,
     hotkeys_selected_index = 1,
@@ -160,5 +186,6 @@ Settings = {
         },
     },
     address_source_index = 1,
+    address_map_paths = {},
     tas = NewTASState(),
 }

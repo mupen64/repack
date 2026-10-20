@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 if UIDProvider then return end
@@ -23,5 +23,7 @@ end
 
 
 UIDProvider = {
-    allocate_once = allocate_once
+    allocate_once = allocate_once,
+    -- To be used as a placeholder for unknown UID allocations. Big enough to fit most things.
+    unknown = 4096,
 }

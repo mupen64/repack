@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local PRESETS_PATH <const> = 'presets.json'
@@ -20,7 +20,10 @@ Presets.persistent.presets[1] = ugui.internal.deep_clone(DEFAULT_PRESET)
 ---@param i integer
 function Presets.apply(i)
     Presets.persistent.current_index = ugui.internal.clamp(i, 1, #Presets.persistent.presets)
-    Settings = Presets.persistent.presets[Presets.persistent.current_index]
+    local preset = deep_merge(DEFAULT_PRESET, Presets.persistent.presets[Presets.persistent.current_index])
+    Presets.persistent.presets[Presets.persistent.current_index] = preset
+    Settings = preset
+    Mapping.restore_map_files()
     if Settings.autodetect_address then
         Settings.address_source_index = Memory.find_matching_address_source_index()
     end
@@ -70,7 +73,16 @@ function Presets.load()
     local encoded = file:read('a')
     io.close(file)
 
-    local deserialized = json.decode(encoded)
+    local ok, deserialized = pcall(json.decode, encoded)
+    if not ok or type(deserialized) ~= 'table' then
+        print(string.format('Failed to load %s, restoring default presets. Reason: %s', PRESETS_PATH,
+            tostring(deserialized)))
+
+        Presets.persistent.current_index = 1
+        Presets.persistent.presets = { ugui.internal.deep_clone(DEFAULT_PRESET) }
+        Presets.save()
+        return
+    end
 
     deserialized = deep_merge(Presets.persistent, deserialized)
 

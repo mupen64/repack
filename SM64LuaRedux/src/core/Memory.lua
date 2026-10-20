@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@class GameState
@@ -30,6 +30,7 @@
 ---@field public mario_y number
 ---@field public mario_z number
 ---@field public mario_pitch integer
+---@field public mario_roll integer
 ---@field public mario_yaw_vel integer
 ---@field public mario_pitch_vel integer
 ---@field public mario_object_pointer integer
@@ -40,12 +41,24 @@
 ---@field public mario_buffered integer
 ---@field public mario_held_buttons integer A | B | Z | START | DUP | DDOWN | DLEFT | DRIGHT
 ---@field public mario_pressed_buttons integer U1 | U2 | L | R | CUP | CDOWN | CLEFT | CRIGHT
----@field public mario_global_timer integer
+---@field public global_timer integer
 ---@field public rng_value integer
 ---@field public mario_animation integer
+---@field public mario_animation_timer integer
 ---@field public mario_gfx_angle integer
 ---@field public mario_hat_state integer
+---@field public floor_address integer
+---@field public floor_yaw integer
+---@field public floor_type integer
+---@field public floor_normal_x number
+---@field public floor_normal_y number
+---@field public floor_normal_z number
+---@field public area_terrain_type integer
 ---Represents a readout of the game state.
+
+---@class Object
+---@field public address integer
+---@field public name string
 
 Memory = {
 	---@type GameState
@@ -55,7 +68,14 @@ Memory = {
 	---@type GameState
 	---@diagnostic disable-next-line: missing-fields
 	previous = {},
+
+	---@type Object[]
+	objects = {},
 }
+
+-- used to help determine when Memory.update_objects() should be called
+local objects_loaded = false
+local Objects = dofile(core_path .. 'Objects.lua')
 
 ---Initializes the current and previous game state to the current readout from the emulator.
 function Memory.initialize()
@@ -65,6 +85,7 @@ end
 
 ---Updates the current game state from the emulator.
 function Memory.update()
+	objects_loaded = false -- assume after any tick that the object list is outdated
 	local address_source = Addresses[Settings.address_source_index]
 	Memory.current.camera_fov = memory.readfloat(address_source.camera_fov)
 	Memory.current.camera_angle = memory.readword(address_source.camera_angle)
@@ -91,6 +112,7 @@ function Memory.update()
 	Memory.current.mario_y = MoreMaths.raw_to_float(memory.readdword(address_source.mario_y))
 	Memory.current.mario_z = MoreMaths.raw_to_float(memory.readdword(address_source.mario_z))
 	Memory.current.mario_pitch = memory.readwordsigned(address_source.mario_pitch)
+	Memory.current.mario_roll = memory.readwordsigned(address_source.mario_facing_yaw + 0x2)
 	Memory.current.mario_yaw_vel = memory.readwordsigned(address_source.mario_yaw_vel)
 	Memory.current.mario_pitch_vel = memory.readwordsigned(address_source.mario_yaw_vel)
 	Memory.current.mario_object_pointer = memory.readdword(address_source.mario_object_pointer)
@@ -101,11 +123,19 @@ function Memory.update()
 	Memory.current.mario_buffered = memory.readbyte(address_source.mario_buffered)
 	Memory.current.mario_held_buttons = memory.readbyte(address_source.mario_held_buttons)
 	Memory.current.mario_pressed_buttons = memory.readbyte(address_source.mario_pressed_buttons)
-	Memory.current.mario_global_timer = memory.readdword(address_source.global_timer)
+	Memory.current.global_timer = memory.readdword(address_source.global_timer)
 	Memory.current.rng_value = memory.readword(address_source.rng_value)
-	Memory.current.mario_animation = memory.readword(memory.readdword(address_source.mario_object_effective) + address_source.mario_animation)
-	Memory.current.mario_gfx_angle = memory.readword(memory.readdword(address_source.mario_object_effective) + address_source.mario_gfx_angle)
+	Memory.current.mario_animation = memory.readword(Memory.current.mario_object_effective + 0x38)
+	Memory.current.mario_animation_timer = memory.readword(Memory.current.mario_object_effective + 0x40)
+	Memory.current.mario_gfx_angle = memory.readword(Memory.current.mario_object_effective + 0xD6)
 	Memory.current.mario_hat_state = memory.readbyte(address_source.mario_hat_state)
+	Memory.current.floor_address = memory.readdword(address_source.floor_address)
+	Memory.current.floor_yaw = memory.readword(address_source.floor_yaw)
+	Memory.current.floor_type = memory.readword(Memory.current.floor_address)
+	Memory.current.floor_normal_x = memory.readfloat(Memory.current.floor_address + 0x1C)
+	Memory.current.floor_normal_y = memory.readfloat(Memory.current.floor_address + 0x20)
+	Memory.current.floor_normal_z = memory.readfloat(Memory.current.floor_address + 0x24)
+	Memory.current.area_terrain_type = memory.readword(memory.readdword(address_source.area_address) + 0x2)
 end
 
 ---Copies the current game state to the previous game state.
@@ -114,12 +144,30 @@ function Memory.update_previous()
 end
 
 ---Finds the entry from `Addresses` which best matches the region of the running game based on a pattern search.
+---If nothing matches (e.g. a ROM hack loaded from a map file), the current selection is kept.
 ---@return integer # The best-matching address set as an index into `Addresses`
 function Memory.find_matching_address_source_index()
-	for key, value in pairs(Addresses) do
+	for key, value in ipairs(Addresses) do
 		if memory.readdword(value.pattern) == value.pattern_value then
 			return key
 		end
 	end
-	return 1
+	return Addresses[Settings.address_source_index] and Settings.address_source_index or 1
+end
+
+function Memory.objects_need_updating()
+	return not objects_loaded
+end
+
+---Populate Memory.objects. Since this is expensive, it wont be automatically called each frame.
+---Instead, call this manually when you need it.
+function Memory.update_objects()
+	Memory.objects = {}
+	Objects.iterate(function(address)
+		Memory.objects[#Memory.objects + 1] = {
+			address = address,
+			name = Objects.get_name(address)
+		}
+	end)
+	objects_loaded = true
 end

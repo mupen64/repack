@@ -4,9 +4,9 @@ Every non-library file must contain the following header:
 
 ```lua
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 ```
 
@@ -18,7 +18,7 @@ Any group of rules with an identical heading specified within this document is t
 
 # Code Style
 
-Code formatting must abide by the `.vscode/settings.json` file.
+Code formatting must abide by the `.luarc` file.
 
 It's recommended to use the [sumneko Lua VSCode extension](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) for development, as it understands and applies the formatting config.
 

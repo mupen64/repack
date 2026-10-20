@@ -1,14 +1,14 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@type ProjectTab
 ---@diagnostic disable-next-line: assign-type-mismatch
 local __impl = __impl
 
-__impl.name = function() return Locales.str('SEMANTIC_WORKFLOW_PROJECT_TAB_NAME') end
+__impl.name = function() return Locales.msg.SEMANTIC_WORKFLOW_PROJECT_TAB_NAME end
 __impl.help_key = 'PROJECT_TAB'
 
 ---@type Project
@@ -24,7 +24,7 @@ local UID = UIDProvider.allocate_once('ProjectTab', function(enum_next)
         SaveProject = enum_next(),
         PurgeProject = enum_next(),
         DisableProjectSheets = enum_next(),
-        ProjectSheetBase = enum_next(1024), -- TODO: allocate an exact amount, assuming a scroll bar for too many sheets in one project
+        ProjectSheetBase = enum_next(UIDProvider.unknown),
         AddSheet = enum_next(),
         ConfirmationYes = enum_next(),
         ConfirmationNo = enum_next(),
@@ -49,16 +49,16 @@ local function create_confirm_dialog(prompt, on_confirmed)
             rectangle = grid_rect(0, top - 8, 8, 8),
             text = prompt,
             color = theme.button.text[1],
-            font_size = theme.font_size * 1.2 * Drawing.scale,
+            font_size = theme.font_size * 1.2,
             font_name = theme.font_name,
-            align_x = BreitbandGraphics.alignment.center,
-            align_y = BreitbandGraphics.alignment['end'],
+            align_x = ugui.alignment.center,
+            align_y = ugui.alignment['end'],
         })
 
         if ugui.button({
                 uid = UID.ConfirmationYes,
                 rectangle = grid_rect(4, top, 2, Gui.MEDIUM_CONTROL_HEIGHT),
-                text = Locales.str('YES'),
+                text = Locales.msg.YES,
             }) then
             on_confirmed()
             SemanticWorkflowDialog = nil
@@ -66,7 +66,7 @@ local function create_confirm_dialog(prompt, on_confirmed)
         if ugui.button({
                 uid = UID.ConfirmationNo,
                 rectangle = grid_rect(2, top, 2, Gui.MEDIUM_CONTROL_HEIGHT),
-                text = Locales.str('NO'),
+                text = Locales.msg.NO,
             }) then
             SemanticWorkflowDialog = nil
         end
@@ -75,15 +75,15 @@ end
 
 local function render_confirm_deletion_prompt(sheet)
     return create_confirm_dialog(
-        Locales.str('SEMANTIC_WORKFLOW_PROJECT_CONFIRM_SHEET_DELETION_1')
+        Locales.msg.SEMANTIC_WORKFLOW_PROJECT_CONFIRM_SHEET_DELETION_1
         .. sheet.name
-        .. Locales.str('SEMANTIC_WORKFLOW_PROJECT_CONFIRM_SHEET_DELETION_2'),
+        .. Locales.msg.SEMANTIC_WORKFLOW_PROJECT_CONFIRM_SHEET_DELETION_2,
         function() SemanticWorkflowProject:remove_sheet(sheet) end
     )
 end
 
 local RenderConfirmPurgeDialog = create_confirm_dialog(
-    Locales.str('SEMANTIC_WORKFLOW_PROJECT_CONFIRM_PURGE'),
+    Locales.msg.SEMANTIC_WORKFLOW_PROJECT_CONFIRM_PURGE,
     function()
         local ignored_files = {}
         local project_folder = SemanticWorkflowProject:project_folder()
@@ -106,12 +106,12 @@ function __impl.render(draw)
         ugui.label({
             uid = UID.NoSheetsLabel,
             rectangle = grid_rect(0, 0, 8, 16),
-            text = Locales.str('SEMANTIC_WORKFLOW_PROJECT_NO_SHEETS_AVAILABLE'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_NO_SHEETS_AVAILABLE,
             color = theme.button.text[1],
-            font_size = theme.font_size * 1.2 * Drawing.scale,
+            font_size = theme.font_size * 1.2,
             font_name = theme.font_name,
-            align_x = BreitbandGraphics.alignment.center,
-            align_y = BreitbandGraphics.alignment.center,
+            align_x = ugui.alignment.center,
+            align_y = ugui.alignment.center,
         })
     end
 
@@ -121,14 +121,14 @@ function __impl.render(draw)
             grid_rect(0, top, 8, Gui.MEDIUM_CONTROL_HEIGHT),
             'start',
             SemanticWorkflowProject.project_location
-            .. '\n' .. Locales.str('SEMANTIC_WORKFLOW_PROJECT_FILE_VERSION') .. SemanticWorkflowProject.version
+            .. '\n' .. Locales.msg.SEMANTIC_WORKFLOW_PROJECT_FILE_VERSION .. SemanticWorkflowProject.version
         )
     end
     if ugui.button({
             uid = UID.NewProject,
             rectangle = grid_rect(0, top + 1, 1.5, Gui.MEDIUM_CONTROL_HEIGHT),
-            text = Locales.str('SEMANTIC_WORKFLOW_PROJECT_NEW'),
-            tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_NEW_TOOL_TIP'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_NEW,
+            tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_NEW_TOOL_TIP,
             is_enabled = main_gui_enabled(),
         }) then
         local path = iohelper.filediag('*.swp', 1)
@@ -141,8 +141,8 @@ function __impl.render(draw)
     if ugui.button({
             uid = UID.OpenProject,
             rectangle = grid_rect(1.5, top + 1, 1.5, Gui.MEDIUM_CONTROL_HEIGHT),
-            text = Locales.str('SEMANTIC_WORKFLOW_PROJECT_OPEN'),
-            tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_OPEN_TOOL_TIP'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_OPEN,
+            tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_OPEN_TOOL_TIP,
             is_enabled = main_gui_enabled(),
         }) then
         local path = iohelper.filediag('*.swp', 0)
@@ -154,8 +154,8 @@ function __impl.render(draw)
     if ugui.button({
             uid = UID.SaveProject,
             rectangle = grid_rect(3, top + 1, 1.5, Gui.MEDIUM_CONTROL_HEIGHT),
-            text = Locales.str('SEMANTIC_WORKFLOW_PROJECT_SAVE'),
-            tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_SAVE_TOOL_TIP'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_SAVE,
+            tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_SAVE_TOOL_TIP,
             is_enabled = main_gui_enabled(),
         }) then
         if SemanticWorkflowProject.project_location == nil then
@@ -172,8 +172,8 @@ function __impl.render(draw)
     if ugui.button({
             uid = UID.PurgeProject,
             rectangle = grid_rect(4.5, top + 1, 1.5, Gui.MEDIUM_CONTROL_HEIGHT),
-            text = Locales.str('SEMANTIC_WORKFLOW_PROJECT_PURGE'),
-            tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_PURGE_TOOL_TIP'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_PURGE,
+            tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_PURGE_TOOL_TIP,
             is_enabled = main_gui_enabled() and SemanticWorkflowProject.project_location ~= nil,
         }) then
         SemanticWorkflowDialog = RenderConfirmPurgeDialog
@@ -183,7 +183,7 @@ function __impl.render(draw)
     for i = 1, #SemanticWorkflowProject.all, 1 do
         available_sheets[i] = SemanticWorkflowProject.all[i].name
     end
-    available_sheets[#available_sheets + 1] = Locales.str('SEMANTIC_WORKFLOW_PROJECT_ADD_SHEET')
+    available_sheets[#available_sheets + 1] = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_ADD_SHEET
 
     top = 3
 
@@ -192,11 +192,11 @@ function __impl.render(draw)
         local sheet = SemanticWorkflowProject.all[i]
         local y = top + (i - 1) * Gui.MEDIUM_CONTROL_HEIGHT
         local is_checked = sheet == SemanticWorkflowProject.current and sheet ~= nil
-        local tooltip = Locales.str(
+        local tooltip = Locales.msg[
             is_checked
             and 'SEMANTIC_WORKFLOW_PROJECT_DISABLE_TOOL_TIP'
             or 'SEMANTIC_WORKFLOW_PROJECT_SELECT_TOOL_TIP'
-        )
+        ]
 
         if selecting_sheet_base_for ~= nil then
             local function IsValidTarget()
@@ -221,7 +221,7 @@ function __impl.render(draw)
                 uid = uid,
                 rectangle = grid_rect(0, y, 3, Gui.MEDIUM_CONTROL_HEIGHT),
                 text = available_sheets[i],
-                tooltip = sheet ~= nil and Locales.str('SEMANTIC_WORKFLOW_PROJECT_SET_BASE_SHEET_TOOL_TIP') .. sheet.name or nil,
+                tooltip = sheet ~= nil and Locales.msg.SEMANTIC_WORKFLOW_PROJECT_SET_BASE_SHEET_TOOL_TIP .. sheet.name or nil,
                 is_checked = false,
                 is_enabled = IsValidTarget()
             }) then
@@ -286,25 +286,25 @@ function __impl.render(draw)
 
         local icon_mixin = { icon_size = 12 }
 
-        if (draw_utility_button({ text = '[icon:arrow_up]', tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_MOVE_SHEET_UP_TOOL_TIP'), enabled = i > 1, styler_mixin = icon_mixin })) then
+        if (draw_utility_button({ text = '[icon:arrow_up]', tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_MOVE_SHEET_UP_TOOL_TIP, enabled = i > 1, styler_mixin = icon_mixin })) then
             SemanticWorkflowProject:move_sheet(sheet, -1)
         end
 
-        if (draw_utility_button({ text = '[icon:arrow_down]', tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_MOVE_SHEET_DOWN_TOOL_TIP'), enabled = i < #SemanticWorkflowProject.all, styler_mixin = icon_mixin })) then
+        if (draw_utility_button({ text = '[icon:arrow_down]', tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_MOVE_SHEET_DOWN_TOOL_TIP, enabled = i < #SemanticWorkflowProject.all, styler_mixin = icon_mixin })) then
             SemanticWorkflowProject:move_sheet(sheet, 1)
         end
 
-        if (draw_utility_button({ text = '[icon:delete]', tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_DELETE_SHEET_TOOL_TIP'), styler_mixin = icon_mixin })) then
+        if (draw_utility_button({ text = '[icon:delete]', tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_DELETE_SHEET_TOOL_TIP, styler_mixin = icon_mixin })) then
             SemanticWorkflowDialog = render_confirm_deletion_prompt(sheet)
         end
 
-        if (draw_utility_button({ text = '[icon:duplicate]', tooltip = Locales.str('SEMANTIC_WORKFLOW_DUPLICATE_SHEET'), enabled = true, styler_mixin = icon_mixin })) then
+        if (draw_utility_button({ text = '[icon:duplicate]', tooltip = Locales.msg.SEMANTIC_WORKFLOW_DUPLICATE_SHEET, enabled = true, styler_mixin = icon_mixin })) then
             SemanticWorkflowProject:duplicate_sheet(sheet)
         end
 
         if (draw_utility_toggle_button({
             text = selecting_sheet_base_for == i and '...' or '[icon:base_sheet]',
-            tooltip = sheet._base_sheet ~= nil and (Locales.str('SEMANTIC_WORKFLOW_PROJECT_BASE_SHEET_TOOL_TIP') .. sheet._base_sheet.name) or Locales.str('SEMANTIC_WORKFLOW_PROJECT_NO_BASE_SHEET_TOOL_TIP'),
+            tooltip = sheet._base_sheet ~= nil and (Locales.msg.SEMANTIC_WORKFLOW_PROJECT_BASE_SHEET_TOOL_TIP .. sheet._base_sheet.name) or Locales.msg.SEMANTIC_WORKFLOW_PROJECT_NO_BASE_SHEET_TOOL_TIP,
             toggled = sheet._base_sheet ~= nil,
             width = 0.75,
             override_enable = selecting_sheet_base_for == i,
@@ -317,18 +317,18 @@ function __impl.render(draw)
             end
         end
 
-        if (draw_utility_toggle_button({ text = '.st', tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_REBASE_SHEET_TOOL_TIP'), toggled = sheet._base_sheet == nil, width = 0.75 })) then
+        if (draw_utility_toggle_button({ text = '.st', tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_REBASE_SHEET_TOOL_TIP, toggled = sheet._base_sheet == nil, width = 0.75 })) then
             SemanticWorkflowProject:rebase(sheet)
         end
 
-        if (draw_utility_button({ text = '.sws', tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_REPLACE_INPUTS_TOOL_TIP'), enabled = true, width = 0.75 })) then
+        if (draw_utility_button({ text = '.sws', tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_REPLACE_INPUTS_TOOL_TIP, enabled = true, width = 0.75 })) then
             local path = iohelper.filediag('*.sws', 0)
             if string.len(path) > 0 then
                 sheet:load(path, false)
             end
         end
 
-        if (draw_utility_button({ text = '[icon:without_save]', tooltip = Locales.str('SEMANTIC_WORKFLOW_PROJECT_PLAY_WITHOUT_ST_TOOL_TIP'), styler_mixin = icon_mixin })) then
+        if (draw_utility_button({ text = '[icon:without_save]', tooltip = Locales.msg.SEMANTIC_WORKFLOW_PROJECT_PLAY_WITHOUT_ST_TOOL_TIP, styler_mixin = icon_mixin })) then
             SemanticWorkflowProject:select(sheet, false)
         end
     end

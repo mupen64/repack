@@ -1,14 +1,14 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local notifications = {}
 
 local UID = UIDProvider.allocate_once('Notifications', function(enum_next)
     return {
-        NotificationBase = enum_next(8),
+        NotificationBase = enum_next(UIDProvider.unknown),
     }
 end)
 
@@ -36,14 +36,14 @@ return {
         end
 
         local theme = Styles.theme()
-        local foreground_color = BreitbandGraphics.invert_color(theme.background_color)
+        local foreground_color = ugui.color_source_to_rgba8(ugui.invert_color(theme.background_color))
 
         local text_scale = 1.25
 
         for i = 1, #notifications, 1 do
             local notification = notifications[i]
 
-            local size = BreitbandGraphics.get_text_size(notification.text, theme.font_size * Drawing.scale * text_scale,
+            local size = BreitbandGraphics.get_text_size(notification.text, theme.font_size * text_scale,
                 theme.font_name)
 
             local padding = ugui.standard_styler.params.textbox.padding.x
@@ -55,7 +55,7 @@ return {
             local y = ugui.internal.environment.window_size.y - 50
 
             BreitbandGraphics.fill_rectangle(
-                { x = x, y = y, width = size.width, height = size.height },
+                Drawing.map_rect({ x = x, y = y, width = size.width, height = size.height }),
                 theme.background_color)
 
             ugui.label({
@@ -63,10 +63,10 @@ return {
                 rectangle = { x = x, y = y, width = size.width + 1, height = size.height + 1 },
                 text = notification.text,
                 color = foreground_color,
-                font_size = theme.font_size * Drawing.scale * text_scale,
+                font_size = theme.font_size * text_scale,
                 font_name = theme.font_name,
-                align_x = BreitbandGraphics.alignment['start'],
-                align_y = BreitbandGraphics.alignment['start'],
+                align_x = ugui.alignment['start'],
+                align_y = ugui.alignment['start'],
             })
         end
 
