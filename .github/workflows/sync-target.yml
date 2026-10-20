@@ -156,34 +156,27 @@ jobs:
       - name: Get latest SM64LuaRedux release tag
         id: get-sm64-tag
         if: inputs.mode == 'stable' && steps.get-release.outputs.found == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG=$(gh api \
-            "repos/mupen64/SM64LuaRedux/releases/latest" \
-            --jq '.tag_name')
-          RELEASE_URL=$(gh api \
-            "repos/mupen64/SM64LuaRedux/releases/latest" \
-            --jq '.html_url')
+          RELEASE=$(curl -fsSL "https://codeberg.org/api/v1/repos/mupen64/SM64LuaRedux/releases/latest")
+          TAG=$(printf '%s' "$RELEASE" | jq -er '.tag_name')
+          RELEASE_URL=$(printf '%s' "$RELEASE" | jq -er '.html_url')
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "sm64_link=$RELEASE_URL" >> "$GITHUB_OUTPUT"
 
       - name: Get SM64LuaRedux main commit
         id: get-sm64-head
         if: inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          HEAD_SHA=$(gh api \
-            "repos/mupen64/SM64LuaRedux/commits/main" \
-            --jq '.sha')
-          echo "sm64_link=https://github.com/mupen64/SM64LuaRedux/commit/$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          HEAD_SHA=$(curl -fsSL \
+            "https://codeberg.org/api/v1/repos/mupen64/SM64LuaRedux/git/commits/main" \
+            | jq -er '.sha')
+          echo "sm64_link=https://codeberg.org/mupen64/SM64LuaRedux/commit/$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Download and unpack SM64LuaRedux stable release
         if: inputs.mode == 'stable' && steps.get-release.outputs.found == 'true'
         run: |
           curl -fsSL \
-            "https://github.com/mupen64/SM64LuaRedux/archive/refs/tags/${{ steps.get-sm64-tag.outputs.tag }}.zip" \
+            "https://codeberg.org/mupen64/SM64LuaRedux/archive/${{ steps.get-sm64-tag.outputs.tag }}.zip" \
             -o sm64luaredux-stable.zip
           mkdir -p _sm64stabletmp
           unzip -o sm64luaredux-stable.zip -d _sm64stabletmp
@@ -197,7 +190,7 @@ jobs:
         if: inputs.mode == 'nightly' && steps.get-run.outputs.found == 'true'
         run: |
           curl -fsSL \
-            "https://github.com/mupen64/SM64LuaRedux/archive/refs/heads/main.zip" \
+            "https://codeberg.org/mupen64/SM64LuaRedux/archive/main.zip" \
             -o sm64luaredux.zip
 
       - name: Unpack SM64LuaRedux
@@ -205,8 +198,9 @@ jobs:
         run: |
           mkdir -p SM64LuaRedux
           unzip -o sm64luaredux.zip -d _sm64tmp
-          # The zip extracts to SM64LuaRedux-main/; copy its contents into place
-          cp -rf _sm64tmp/SM64LuaRedux-main/. SM64LuaRedux/
+          # The zip extracts to a single top-level folder; copy its contents into place
+          TOP=$(ls _sm64tmp/)
+          cp -rf "_sm64tmp/$TOP/." SM64LuaRedux/
           rm -rf _sm64tmp sm64luaredux.zip
 
       # LICENSE & README
