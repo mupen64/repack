@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('GhostTab', function(enum_next)
@@ -9,6 +9,7 @@ local UID = UIDProvider.allocate_once('GhostTab', function(enum_next)
         TabControl = enum_next(UIDProvider.unknown),
         Overlay = enum_next(),
         OverlayColor = enum_next(),
+        TabPanels = enum_next(3),
     }
 end)
 
@@ -20,6 +21,10 @@ local tabs = {
     playback_tab,
     dofile(views_path .. 'GhostTab/Settings.lua'),
 }
+
+local previous_tab_index = Settings.ghost_tab_index or 1
+local tab_transition_x = 10
+local tab_out_transition = ugui.transition.fly({ x = -10, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
 
 ---Draws the selected playback ghost's data over the game.
 ---Called every frame from SM64Lua.lua so it stays up outside the Ghost tab.
@@ -69,7 +74,7 @@ function GhostTab_draw_ghost_overlay(left_shift)
 end
 
 return {
-    name = function() return Locales.str('GHOST_TAB_NAME') end,
+    name = function() return Locales.msg.GHOST_TAB_NAME end,
     draw = function()
         local data = ugui.tabcontrol({
             uid = UID.TabControl,
@@ -78,6 +83,20 @@ return {
             selected_index = Settings.ghost_tab_index or 1,
         })
         Settings.ghost_tab_index = data.selected_index
-        tabs[Settings.ghost_tab_index].draw()
+        if Settings.ghost_tab_index ~= previous_tab_index then
+            tab_transition_x = Settings.ghost_tab_index > previous_tab_index and 10 or -10
+            tab_out_transition.tick = ugui.transition.fly({ x = -tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+            previous_tab_index = Settings.ghost_tab_index
+        end
+        tab_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+
+        ugui.panel({
+            uid = UID.TabPanels + Settings.ghost_tab_index - 1,
+            rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
+            in_transition = ugui.transition.fly({ x = tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+            out_transition = tab_out_transition,
+        }, function()
+            tabs[Settings.ghost_tab_index].draw()
+        end)
     end,
 }

@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 -- Mario action types
@@ -20,7 +20,7 @@ local FREEFALL_LAND_STOP = 0x0C000232
 local CROUCH_SLIDE = 0x04808459
 local HOLD_WALKING = 0x00000442
 local TURNING_AROUND = 0x00000443
-local BRAKING = 0x04000445 
+local BRAKING = 0x04000445
 local HOLD_BUTT_SLIDE = 0x00840454
 local BUTT_SLIDE = 0x00840452
 local TRIPLE_JUMP = 0x01000882
@@ -34,21 +34,21 @@ local FREEFALL = 0x0100088C
 local DIVE_SLIDE = 0x00880456
 
 -- MARIO action >= 0x04000470, <= 0x04000473
-local JUMP_LAND = 0x04000470 
-local FREEFALL_LAND = 0x04000471 
-local DOUBLE_JUMP_LAND = 0x04000472 
-local SIDE_FLIP_LAND = 0x04000473 
+local JUMP_LAND = 0x04000470
+local FREEFALL_LAND = 0x04000471
+local DOUBLE_JUMP_LAND = 0x04000472
+local SIDE_FLIP_LAND = 0x04000473
 
 -- MARIO action >= 0x00000474, <= 0x00000477
-local HOLD_JUMP_LAND = 0x00000474 
-local HOLD_FREEFALL_LAND = 0x00000475 
-local QUICKSAND_JUMP_LAND = 0x00000476 
+local HOLD_JUMP_LAND = 0x00000474
+local HOLD_FREEFALL_LAND = 0x00000475
+local QUICKSAND_JUMP_LAND = 0x00000476
 local HOLD_QUICKSAND_JUMP_LAND = 0x00000477
 
 -- MARIO action >= 0x0C008220, <= 0x0C008223
 local CROUCHING = 0x0C008220
-local START_CROUCHING = 0x0C008221 
-local STOP_CROUCHING = 0x0C008222 
+local START_CROUCHING = 0x0C008221
+local STOP_CROUCHING = 0x0C008222
 local START_CRAWLING = 0x0C008223
 
 -- action masks
@@ -58,19 +58,19 @@ local ACT_FLAG_SWIMMING = 0x2000
 -- Surface types
 local SURFACE_SLOW = 0x09
 local SURFACE_VERY_SLIPPERY = 0x13
-local SURFACE_SLIPPERY = 0x14 
-local SURFACE_NOT_SLIPPERY = 0x15 
-local SURFACE_NOISE_SLIPPERY = 0x2A 
-local SURFACE_ICE = 0x2E 
-local SURFACE_HARD_SLIPPERY = 0x35 
-local SURFACE_HARD_VERY_SLIPPERY = 0x36 
-local SURFACE_HARD_NOT_SLIPPERY = 0x37 
-local SURFACE_NOISE_VERY_SLIPPERY_73 = 0x73 
-local SURFACE_NOISE_VERY_SLIPPERY_74 = 0x74 
-local SURFACE_NOISE_VERY_SLIPPERY = 0x75 
-local SURFACE_NO_CAM_COL_VERY_SLIPPERY = 0x78 
-local SURFACE_NO_CAM_COL_SLIPPERY = 0x79 
-local SURFACE_SWITCH = 0x7A 
+local SURFACE_SLIPPERY = 0x14
+local SURFACE_NOT_SLIPPERY = 0x15
+local SURFACE_NOISE_SLIPPERY = 0x2A
+local SURFACE_ICE = 0x2E
+local SURFACE_HARD_SLIPPERY = 0x35
+local SURFACE_HARD_VERY_SLIPPERY = 0x36
+local SURFACE_HARD_NOT_SLIPPERY = 0x37
+local SURFACE_NOISE_VERY_SLIPPERY_73 = 0x73
+local SURFACE_NOISE_VERY_SLIPPERY_74 = 0x74
+local SURFACE_NOISE_VERY_SLIPPERY = 0x75
+local SURFACE_NO_CAM_COL_VERY_SLIPPERY = 0x78
+local SURFACE_NO_CAM_COL_SLIPPERY = 0x79
+local SURFACE_SWITCH = 0x7A
 
 -- Surface slipperieness types
 local SURFACE_CLASS_DEFAULT = 0x0
@@ -242,7 +242,7 @@ end
 
 Strain = {
 	arccot = function(r, d, t) -- expects t > 0
-		angle = math.atan(0.15 * (r * t + d)) 
+		angle = math.atan(0.15 * (r * t + d))
 		angle = angle / math.pi * 32768
 		return math.floor(16384 - angle)
 	end
@@ -278,7 +278,7 @@ Engine.get_point99_trick_goal_angle = function(action, v, current_input, movemen
 			action == BACKWARDS_AIR_KB or
 			action == HOLDING_POLE or
 			action == CLIMBING_POLE)
-	
+
 	-- grounded (or lava boost)
 	local GROUNDED_ACTION = (action == WALKING or
 			action == DECELERATING or
@@ -752,7 +752,7 @@ local function apply_slope_accel(floor_type, floor_norm, hspd, updated_yaw)
     if (not mario_floor_is_slope(floor_type, floor_norm.y)) then
 		return hspd
 	end
-	
+
     local steepness = math.sqrt(floor_norm.x * floor_norm.x + floor_norm.z * floor_norm.z)
 	local slope_class = mario_get_floor_class(floor_type)
 	local floor_dyaw = (Memory.current.floor_yaw - updated_yaw) % 65536
@@ -883,7 +883,7 @@ Engine.scale_inputs_to_magnitude = function(input, goal_mag, maximize_airspeed, 
 			return math.cos(angle - goal_angle)
 		end
 	end
-	
+
 	input.X, input.Y = find_best_joystick(x0, y0, metric)
 end
 
@@ -899,4 +899,3 @@ Engine.scale_inputs_for_dustless_walk = function(input)
 	x, y, mag = normalize_joystick(input.X, input.Y)
 	Settings.tas.goal_mag = math.ceil(mag)
 end
-

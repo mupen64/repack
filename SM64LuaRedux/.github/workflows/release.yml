@@ -1,0 +1,69 @@
+name: Stable Source Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g. 7.0.0)"
+        required: true
+        type: string
+
+jobs:
+  stable-release:
+    name: Create Stable Source Release
+    runs-on: codeberg-tiny
+
+    steps:
+      - name: Checkout selected branch
+        uses: https://data.forgejo.org/actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bundle source code
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p release-artifact
+          git archive \
+            --format=zip \
+            --output "release-artifact/SM64LuaRedux-${VERSION}-source.zip" \
+            --prefix "SM64LuaRedux-${VERSION}/" \
+            HEAD
+
+      - name: Extract version changelog
+        id: changelog
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          notes=$(awk -v heading="# ${VERSION}" '
+            BEGIN { sub(/[[:space:]]+$/, "", heading) }
+            { sub(/\r$/, ""); line = $0; sub(/[[:space:]]+$/, "", line) }
+            line == heading { found = 1; print; next }
+            found && /^# / { exit }
+            found { print }
+            END { if (!found) exit 1 }
+          ' CHANGELOG.md) || {
+            printf 'No changelog section found for <%s>\n' "$VERSION" >&2
+            printf 'Checked-out commit: %s\n' "$(git rev-parse HEAD)" >&2
+            echo "Available changelog headings:" >&2
+            grep '^# ' CHANGELOG.md >&2 || true
+            exit 1
+          }
+          delimiter="CHANGELOG_$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+          {
+            echo "notes<<${delimiter}"
+            printf '%s\n' "$notes"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create draft stable source release
+        uses: https://data.forgejo.org/actions/forgejo-release@v2.13.4
+        with:
+          direction: upload
+          tag: ${{ inputs.version }}
+          title: ${{ inputs.version }}
+          release-notes: ${{ steps.changelog.outputs.notes }}
+          release-dir: ./release-artifact
+          prerelease: false
+          draft: true
+          token: ${{ forge.token }}

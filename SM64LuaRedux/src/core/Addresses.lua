@@ -1,12 +1,12 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 return {
         {
-                name = function() return Locales.str('ADDRESS_USA') end,
+                name = function() return Locales.msg.ADDRESS_USA end,
                 camera_fov = 0x8033C5A4,
                 camera_angle = 0x8033C714,
                 camera_transition_type = 0x8033BAB1,
@@ -58,7 +58,7 @@ return {
                 segment_table = 0x8033B400,
         },
         {
-                name = function() return Locales.str('ADDRESS_JAPAN') end,
+                name = function() return Locales.msg.ADDRESS_JAPAN end,
                 camera_fov = 0x8033B234,
                 camera_angle = 0x8033B3A4,
                 camera_transition_type = 0x8033A741,
@@ -110,7 +110,7 @@ return {
                 segment_table = 0x8033A090,
         },
         {
-                name = function() return Locales.str('ADDRESS_SHINDOU') end,
+                name = function() return Locales.msg.ADDRESS_SHINDOU end,
                 camera_fov = 0x8031EEB4,
                 camera_angle = 0x8031EE6C,
                 camera_transition_type = 0x8031E301,
@@ -159,7 +159,7 @@ return {
                 segment_table = 0x8031DC58,
         },
         {
-                name = function() return Locales.str('ADDRESS_PAL') end,
+                name = function() return Locales.msg.ADDRESS_PAL end,
                 camera_fov = 0x8030A924,
                 camera_angle = 0x8030A8DC,
                 camera_transition_type = 0x80309D71,

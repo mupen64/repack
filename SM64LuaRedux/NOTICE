@@ -9,3 +9,11 @@ The following assets are licensed under the Apache License, Version 2.0:
   Source: Google Material Symbols — "cycle" icon
   URL: https://fonts.google.com/icons?selected=Material+Symbols+Outlined:cycle
   License: Apache-2.0
+
+The following assets are licensed under the CC0 1.0 license:
+
+- src/core/Angles.lua
+
+  Source: N64 Decomp
+  URL: https://github.com/n64decomp/sm64
+  License: CC0 1.0

@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 -- Each field resolves to a symbol (or list of alternate names) + offset

@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@type InputListGui
@@ -124,7 +124,8 @@ end
 local function interpolate_vectors_to_int(a, b, f)
     local result = {}
     for k, v in pairs(a) do
-        result[k] = math.floor(v + (b[k] - v) * f)
+        local target = b[k] or v
+        result[k] = math.floor(v + (target - v) * f)
     end
     return result
 end
@@ -133,7 +134,7 @@ local function draw_headers(sheet, draw, button_draw_data)
     local background_color = interpolate_vectors_to_int(draw.background_color, { r = 127, g = 127, b = 127 }, 0.25)
     BreitbandGraphics.fill_rectangle(Drawing.map_rect(grid_rect(0, ROW0, COL_BUTTONS_END, ROW2 - ROW0, 0)), background_color)
 
-    draw:text(grid_rect(3, ROW0, 1, 0.5), 'start', Locales.str('SEMANTIC_WORKFLOW_INPUTLIST_NAME'))
+    draw:text(grid_rect(3, ROW0, 1, 0.5), 'start', Locales.msg.SEMANTIC_WORKFLOW_INPUTLIST_NAME)
     sheet.name = ugui.textbox({
         uid = UID.SheetName,
         is_enabled = true,
@@ -327,8 +328,8 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + 0,
                 rectangle = span(COL_COLLAPSE_OR_PREVIEW_1, COL_COLLAPSE_OR_PREVIEW_END),
                 text = section.collapsed and '[icon:arrow_right]' or '[icon:arrow_down]',
-                tooltip = Locales.str(section.collapsed and 'SEMANTIC_WORKFLOW_INPUTS_EXPAND_SECTION' or
-                    'SEMANTIC_WORKFLOW_INPUTS_COLLAPSE_SECTION'),
+                tooltip = Locales.msg[section.collapsed and 'SEMANTIC_WORKFLOW_INPUTS_EXPAND_SECTION' or
+                    'SEMANTIC_WORKFLOW_INPUTS_COLLAPSE_SECTION'],
                 is_checked = not section.collapsed,
                 is_enabled = #section.inputs > 0,
             });
@@ -343,7 +344,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + 2,
                 rectangle = span(COL_ARRANGEMENT_2, COL_ARRANGEMENT_3),
                 text = '[icon:clone_up]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_PREPEND_SECTION_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_PREPEND_SECTION_TOOL_TIP
             }) then
                 queue_table_insert(sheet.sections, section, new_section(), 0)
             end
@@ -352,7 +353,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + 4,
                 rectangle = span(COL_ARRANGEMENT_3, COL_ARRANGEMENT_4),
                 text = '[icon:clone_down]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_APPEND_SECTION_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_APPEND_SECTION_TOOL_TIP
             }) then
                 queue_table_insert(sheet.sections, section, new_section(), 1)
             end
@@ -361,7 +362,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + 6,
                 rectangle = span(COL_ARRANGEMENT_4, COL_ARRANGEMENT_END),
                 text = '[icon:delete]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_DELETE_SECTION_TOOL_TIP"),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_DELETE_SECTION_TOOL_TIP,
                 is_enabled = #sheet.sections > 1
             }) then
                 queue_table_remove(sheet.sections, section)
@@ -372,7 +373,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + 8,
                 rectangle = span(COL_ARRANGEMENT_END, COL_MERGE_SECTION_UP_END),
                 text = '[icon:merge_up]',
-                tooltip = Locales.str('SEMANTIC_WORKFLOW_INPUTS_MERGE_SECTION_UP_TOOL_TIP'),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_MERGE_SECTION_UP_TOOL_TIP,
                 is_enabled = index > 1
             }) then
                 local merge_into = sheet.sections[index - 1]
@@ -404,7 +405,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + INPUT_ROW_UID_OFFSET,
                 rectangle = span(COL_COLLAPSE_OR_PREVIEW_1, COL_COLLAPSE_OR_PREVIEW_END),
                 text = '[icon:next_page]',
-                tooltip = Locales.str('SEMANTIC_WORKFLOW_INPUTS_RUN_TO_INPUT_TOOL_TIP'),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_RUN_TO_INPUT_TOOL_TIP,
             }) then
                 sheet.preview_input = { section_index = section_index, input_index = input_index }
                 sheet:run_to_preview()
@@ -415,7 +416,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + INPUT_ROW_UID_OFFSET + 2,
                 rectangle = span(COL_ARRANGEMENT_2, COL_ARRANGEMENT_3),
                 text = '[icon:clone_up]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_PREPEND_INPUT_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_PREPEND_INPUT_TOOL_TIP
             }) then
                 queue_table_insert(section.inputs, input, ugui.internal.deep_clone(input), 0, section)
             end
@@ -424,7 +425,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + INPUT_ROW_UID_OFFSET + 4,
                 rectangle = span(COL_ARRANGEMENT_3, COL_ARRANGEMENT_4),
                 text = '[icon:clone_down]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_APPEND_INPUT_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_APPEND_INPUT_TOOL_TIP
             }) then
                 queue_table_insert(section.inputs, input, ugui.internal.deep_clone(input), 1, section)
             end
@@ -433,7 +434,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 uid = uid_base + INPUT_ROW_UID_OFFSET + 6,
                 rectangle = span(COL_ARRANGEMENT_4, COL_ARRANGEMENT_END),
                 text = '[icon:delete]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_DELETE_INPUT_TOOL_TIP"),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_DELETE_INPUT_TOOL_TIP,
                 is_enabled = #section.inputs > 1
             }) then
                 queue_table_remove(section.inputs, input, section)
@@ -441,10 +442,10 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
 
             local termination_tool_tip =
                 (input.end_action ~= 0
-                    and Locales.str('SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_1')
+                    and Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_1
                         .. Locales.action(input.end_action) .. '\n'
                     or ''
-                ) .. Locales.str('SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_2') .. input.timeout
+                ) .. Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_2 .. input.timeout
             if ugui.button({
                 uid = uid_base + INPUT_ROW_UID_OFFSET + 8,
                 rectangle = span(COL_TERMINATION_1, COL_TERMINATION_END),

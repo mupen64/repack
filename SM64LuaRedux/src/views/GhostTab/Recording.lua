@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('GhostRecording', function(enum_next)
@@ -43,7 +43,7 @@ local function object_varwatch_data()
         local data = Ghosts.read_object(addr)
         local vardata = GhostVarWatch.selected_variable_lines()
         object_data_cache.items = data and GhostVarWatch.frame_varwatch_data(data, vardata)
-            or { Locales.str('GHOST_INVALID_OBJECT') }
+            or { Locales.msg.GHOST_INVALID_OBJECT }
     end
     return object_data_cache.items
 end
@@ -62,17 +62,17 @@ local function shorten_path(text)
 end
 
 return {
-    name = function() return Locales.str('GHOST_RECORDING_TAB_NAME') end,
+    name = function() return Locales.msg.GHOST_RECORDING_TAB_NAME end,
     draw = function()
         local theme = Styles.theme()
         local foreground_color = Drawing.foreground_color()
 
-        local status = Locales.str('GHOST_STATUS_IDLE')
+        local status = Locales.msg.GHOST_STATUS_IDLE
         if Ghosts.is_recording() then
-            status = Locales.str('GHOST_STATUS_RECORDING')
+            status = Locales.msg.GHOST_STATUS_RECORDING
             was_recording_timer = SAVED_DISPLAY_TIME
         elseif was_recording_timer > 0 then
-            status = Locales.str('GHOST_STATUS_SAVED')
+            status = Locales.msg.GHOST_STATUS_SAVED
             if previous_global_timer ~= Memory.current.global_timer then
                 previous_global_timer = Memory.current.global_timer
                 was_recording_timer = was_recording_timer - 1
@@ -93,21 +93,21 @@ return {
         local record = ugui.toggle_button({
             uid = UID.RecordGhost,
             rectangle = grid_rect(0.1, 1.85, 7.8, 1),
-            text = Ghosts.is_recording() and Locales.str('GHOST_STOP') or Locales.str('GHOST_START'),
-            tooltip = Locales.str('GHOST_RECORD_TOOLTIP'),
+            text = Ghosts.is_recording() and Locales.msg.GHOST_STOP or Locales.msg.GHOST_START,
+            tooltip = Locales.msg.GHOST_RECORD_TOOLTIP,
             is_checked = Ghosts.is_recording()
         })
         if record ~= Ghosts.is_recording() then
             if Ghosts.is_recording() then
                 local result = Ghosts.stop_recording()
                 if not result then
-                    print(Locales.str('GHOST_STOP_RECORDING_FAILED'))
+                    print(Locales.msg.GHOST_STOP_RECORDING_FAILED)
                 end
             else
                 GhostVarWatch.sync_recorded_variables()
                 local result = Ghosts.start_recording()
                 if not result then
-                    print(Locales.str('GHOST_START_RECORDING_FAILED'))
+                    print(Locales.msg.GHOST_START_RECORDING_FAILED)
                 end
             end
         end
@@ -121,7 +121,7 @@ return {
             uid = UID.GhostPath,
             rectangle = grid_rect(0.1, 2.85, 6.9, 0.8),
             text = path,
-            tooltip = Locales.str('GHOST_PATH_TOOLTIP')
+            tooltip = Locales.msg.GHOST_PATH_TOOLTIP
         })
         if is_focused then
             Settings.ghost_path = path
@@ -131,7 +131,7 @@ return {
                 uid = UID.BrowseGhostPath,
                 rectangle = grid_rect(7.1, 2.85, 0.8, 0.8),
                 text = "...",
-                tooltip = Locales.str('GHOST_BROWSE_TOOLTIP'),
+                tooltip = Locales.msg.GHOST_BROWSE_TOOLTIP,
             }) then
             local path = iohelper.filediag("*.ghost", 1)
             if string.len(path) > 0 then
@@ -142,7 +142,7 @@ return {
         ugui.label({
             uid = UID.ObjectLabel,
             rectangle = grid_rect(0, 3.8, 2.5, 1),
-            text = Locales.str('GHOST_OBJECT_LABEL'),
+            text = Locales.msg.GHOST_OBJECT_LABEL,
             color = foreground_color,
             font_size = theme.font_size * 1.25,
             font_name = theme.font_name,
@@ -153,8 +153,8 @@ return {
         if ugui.toggle_button({
                 uid = UID.RecordMario,
                 rectangle = grid_rect(0.1, 4.6, 1.5, 1),
-                text = Locales.str('GHOST_RECORD_MARIO'),
-                tooltip = Locales.str('GHOST_RECORD_MARIO_TOOLTIP'),
+                text = Locales.msg.GHOST_RECORD_MARIO,
+                tooltip = Locales.msg.GHOST_RECORD_MARIO_TOOLTIP,
                 is_enabled = not Ghosts.is_recording(),
                 is_checked = Ghosts.recording_mode == GhostRecordingModes.mario
             }) then
@@ -164,8 +164,8 @@ return {
         if ugui.toggle_button({
                 uid = UID.RecordObject,
                 rectangle = grid_rect(1.6, 4.6, 3.4, 1),
-                text = Locales.str('GHOST_RECORD_OBJECT'),
-                tooltip = Locales.str('GHOST_RECORD_OBJECT_TOOLTIP'),
+                text = Locales.msg.GHOST_RECORD_OBJECT,
+                tooltip = Locales.msg.GHOST_RECORD_OBJECT_TOOLTIP,
                 is_enabled = not Ghosts.is_recording(),
                 is_checked = Ghosts.recording_mode == GhostRecordingModes.object and not select_object_by_name
             }) then
@@ -176,7 +176,7 @@ return {
         ugui.label({
             uid = UID.AddressLabel,
             rectangle = grid_rect(0.1, 5.6, 2, 1),
-            text = Locales.str('GHOST_ADDRESS_LABEL'),
+            text = Locales.msg.GHOST_ADDRESS_LABEL,
             color = foreground_color,
             font_size = theme.font_size * 1.25,
             font_name = theme.font_name,
@@ -188,7 +188,7 @@ return {
             uid = UID.GhostObjectAddress,
             rectangle = grid_rect(2, 5.7, 3, 0.9),
             text = string.format("0x%X", Ghosts.object_address),
-            tooltip = Locales.str('GHOST_OBJECT_ADDRESS_TOOLTIP'),
+            tooltip = Locales.msg.GHOST_OBJECT_ADDRESS_TOOLTIP,
             styler_mixin = {
                 font_size = theme.font_size * 1.25,
             },
@@ -202,8 +202,8 @@ return {
         if ugui.toggle_button({
                 uid = UID.RecordObjectByName,
                 rectangle = grid_rect(5, 4.6, 2.9, 1),
-                text = Locales.str('GHOST_RECORD_OBJECT_BY_NAME'),
-                tooltip = Locales.str('GHOST_RECORD_OBJECT_BY_NAME_TOOLTIP'),
+                text = Locales.msg.GHOST_RECORD_OBJECT_BY_NAME,
+                tooltip = Locales.msg.GHOST_RECORD_OBJECT_BY_NAME_TOOLTIP,
                 is_enabled = not Ghosts.is_recording(),
                 is_checked = Ghosts.recording_mode == GhostRecordingModes.object and select_object_by_name
             }) then
@@ -241,7 +241,7 @@ return {
             rectangle = grid_rect(0, 6.6, 8, 5.3),
             items = object_list.items,
             selected_index = selected_object_index,
-            tooltip = Locales.str('GHOST_OBJECT_LIST_TOOLTIP'),
+            tooltip = Locales.msg.GHOST_OBJECT_LIST_TOOLTIP,
             is_enabled = by_name_enabled,
         })
         if new_object_index and new_object_index ~= selected_object_index and object_list.objects[new_object_index] then

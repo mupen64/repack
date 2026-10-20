@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 Actions = {}
@@ -38,7 +38,10 @@ ACTION_RESET_PRESET = ACTION_PRESET .. 'Reset to Default'
 ACTION_DELETE_ALL_PRESETS = ACTION_PRESET .. 'Delete All'
 ACTION_SETTINGS = ROOT .. 'Settings ---'
 ACTION_SETTINGS_SET_STYLE = ACTION_SETTINGS .. ' > Set Style...'
+ACTION_SETTINGS_SET_LIGHT_STYLE = ACTION_SETTINGS .. ' > Set Light Style...'
+ACTION_SETTINGS_SET_DARK_STYLE = ACTION_SETTINGS .. ' > Set Dark Style...'
 ACTION_SETTINGS_SET_LANGUAGE = ACTION_SETTINGS .. ' > Set Language...'
+ACTION_SETTINGS_SET_ANIMATIONS = ACTION_SETTINGS .. ' > Set Animations...'
 ACTION_SETTINGS_TOGGLE_CONSOLE_NOTIFICATIONS = ACTION_SETTINGS .. ' > Toggle Console Notifications'
 ACTION_SETTINGS_SET_FF_FPS = ACTION_SETTINGS .. ' > Set Fast-Forward FPS... ---'
 ACTION_SETTINGS_TOGGLE_MANUAL_ON_JOYSTICK = ACTION_SETTINGS .. ' > Manual On Joystick Interact'
@@ -115,11 +118,12 @@ local function option_names(options)
 end
 
 ---Returns the angle formatting options, localized to the current locale.
----@return { name: string, value: boolean }[]
+---@return { name: string, value: integer }[]
 local function angle_format_options()
     return {
-        { name = Locales.str('SETTINGS_VARWATCH_ANGLE_FORMAT_SHORT'), value = false },
-        { name = Locales.str('SETTINGS_VARWATCH_ANGLE_FORMAT_DEGREE'), value = true },
+        { name = Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT_SHORT, value = 1 },
+        { name = Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT_DEGREE, value = 2 },
+        { name = Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT_HAU, value = 3 },
     }
 end
 
@@ -449,35 +453,49 @@ actions[#actions + 1] = wrap_params({
     end,
 })
 
-actions[#actions + 1] = wrap_params({
-    path = ACTION_SETTINGS_SET_STYLE,
-    params = {
-        {
-            key = 'style',
-            name = 'Style',
-            get_initial_value = function()
-                return Styles.theme_names()[Settings.active_style_index]
-            end,
-            get_hints = function(value)
-                return option_hints(Styles.theme_names(), value)
-            end,
-            validator = function(value)
-                if option_index(Styles.theme_names(), value) then
-                    return nil
-                end
-
-                return 'Unknown style.'
-            end,
-        },
-    },
-    on_press = function(params)
-        local index = option_index(Styles.theme_names(), params.style)
-        if index then
-            Settings.active_style_index = index
-            Styles.update_style()
+local function register_style_action(path, setting, index_offset)
+    local function names()
+        if index_offset == 1 then
+            return Styles.style_options()
         end
-    end,
-})
+
+        return Styles.theme_names()
+    end
+
+    actions[#actions + 1] = wrap_params({
+        path = path,
+        params = {
+            {
+                key = 'style',
+                name = 'Style',
+                get_initial_value = function()
+                    return names()[Settings[setting] + index_offset]
+                end,
+                get_hints = function(value)
+                    return option_hints(names(), value)
+                end,
+                validator = function(value)
+                    if option_index(names(), value) then
+                        return nil
+                    end
+
+                    return 'Unknown style.'
+                end,
+            },
+        },
+        on_press = function(params)
+            local index = option_index(names(), params.style)
+            if index then
+                Settings[setting] = index - index_offset
+                Styles.update_style()
+            end
+        end,
+    })
+end
+
+register_style_action(ACTION_SETTINGS_SET_STYLE, 'active_style_index', 1)
+register_style_action(ACTION_SETTINGS_SET_LIGHT_STYLE, 'light_style_index', 0)
+register_style_action(ACTION_SETTINGS_SET_DARK_STYLE, 'dark_style_index', 0)
 
 actions[#actions + 1] = wrap_params({
     path = ACTION_SETTINGS_SET_LANGUAGE,
@@ -504,6 +522,36 @@ actions[#actions + 1] = wrap_params({
         local index = option_index(Locales.names(), params.language)
         if index then
             Settings.locale_index = index
+        end
+    end,
+})
+
+local animation_options = { 'system', 'enabled', 'fast', 'disabled' }
+
+actions[#actions + 1] = wrap_params({
+    path = ACTION_SETTINGS_SET_ANIMATIONS,
+    params = {
+        {
+            key = 'animations',
+            name = 'Animations',
+            get_initial_value = function()
+                return Settings.animations
+            end,
+            get_hints = function(value)
+                return option_hints(animation_options, value)
+            end,
+            validator = function(value)
+                if option_index(animation_options, value) then
+                    return nil
+                end
+                return 'Unknown animation mode.'
+            end,
+        },
+    },
+    on_press = function(params)
+        local index = option_index(animation_options, params.animations)
+        if index then
+            Settings.animations = animation_options[index]
         end
     end,
 })
@@ -623,7 +671,7 @@ actions[#actions + 1] = wrap_params({
             get_initial_value = function()
                 local options = angle_format_options()
                 for i = 1, #options, 1 do
-                    if options[i].value == Settings.format_angles_degrees then
+                    if options[i].value == (Settings.format_angles_hau and 3 or Settings.format_angles_degrees and 2 or 1) then
                         return options[i].name
                     end
                 end
@@ -646,7 +694,8 @@ actions[#actions + 1] = wrap_params({
         local options = angle_format_options()
         local index = option_index(option_names(options), params.format)
         if index then
-            Settings.format_angles_degrees = options[index].value
+            Settings.format_angles_degrees = options[index].value == 2
+            Settings.format_angles_hau = options[index].value == 3
         end
     end,
 })

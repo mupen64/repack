@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="128" align="center" src="https://github.com/Mupen64-Rewrite/SM64LuaRedux/assets/48759429/4c3ac7b9-ba24-401c-b074-9ba364f0295a">
+  <img width="128" align="center" src="assets/logo.webp">
 </p>
 
 <h1 align="center">
@@ -8,24 +8,14 @@
 
 SM64 Lua Redux is the leading SM64 TASing utility.
 
-# Quickstart
-
-1. [Download](https://github.com/Mupen64-Rewrite/SM64LuaRedux/archive/refs/heads/master.zip) the latest version
-2. Unzip the archive
-3. Open a lua console in Mupen64
-4. Browse to the `src/SM64Lua.lua` file and select it
-5. Run the script
-
-or...
-
-3. Drag and drop the `src/SM64Lua.lua` file onto Mupen64
-
-The [SM64 Lua Redux Docs](https://mupen64.com/docs/redux) contains information about usage.
+> [!NOTE]
+> SM64 Lua Redux doesn't ship standalone, get it via the repack at [mupen64.com](https://mupen64.com).
 
 # What's new
 
 - Themes
 - Arctan straining
+- Ghost playback and recording
 - RNG
 - Timer
 - Customizable ramwatch

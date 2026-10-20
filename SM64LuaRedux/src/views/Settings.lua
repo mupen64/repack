@@ -1,14 +1,17 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
-local UID = UIDProvider.allocate_once('SettingsV5', function(enum_next)
+local UID = UIDProvider.allocate_once('SettingsV6', function(enum_next)
     return {
         ActiveStyle = enum_next(),
+        LightStyle = enum_next(),
+        DarkStyle = enum_next(),
         Locale = enum_next(),
         NotificationStyle = enum_next(),
+        Animations = enum_next(),
         RepaintThrottle = enum_next(),
         EnableManualOnJoystickInteract = enum_next(),
         LockHotkeysWhenControlActive = enum_next(),
@@ -16,7 +19,7 @@ local UID = UIDProvider.allocate_once('SettingsV5', function(enum_next)
         InteractionGroup = enum_next(),
         VisualGroupLabel = enum_next(),
         InteractionGroupLabel = enum_next(),
-        VisualItemLabelBase = enum_next(4),
+        VisualItemLabelBase = enum_next(7),
         InteractionItemLabelBase = enum_next(2),
         LoadMapFile = enum_next(),
         Region = enum_next(),
@@ -37,6 +40,7 @@ local UID = UIDProvider.allocate_once('SettingsV5', function(enum_next)
         NavbarCoverLabel = enum_next(),
         VarWatchItemLabelBase = enum_next(UIDProvider.unknown),
         HittestBlockHackPanel = enum_next(),
+        GroupContentPanels = enum_next(4),
     }
 end)
 
@@ -45,24 +49,58 @@ local content_height = VIEWPORT_HEIGHT
 
 local visual_items = {
     {
-        text = function() return Locales.str('SETTINGS_VISUALS_STYLE') end,
+        text = function() return Locales.msg.SETTINGS_VISUALS_STYLE end,
         func = function(rect)
             local new_active_style_index, meta = ugui.combobox({
                 uid = UID.ActiveStyle,
                 rectangle = rect,
-                items = Styles.theme_names(),
-                selected_index = Settings.active_style_index,
+                items = Styles.style_options(),
+                selected_index = Settings.active_style_index + 1,
             })
 
             if meta.signal_change == ugui.signal_change_states.ended then
                 action.invoke(ACTION_SETTINGS_SET_STYLE, nil, nil, {
-                    style = Styles.theme_names()[new_active_style_index],
+                    style = Styles.style_options()[new_active_style_index],
                 })
             end
         end,
     },
     {
-        text = function() return Locales.str('SETTINGS_VISUALS_LOCALE') end,
+        visible = function() return Settings.active_style_index == 0 end,
+        text = function() return Locales.msg.SETTINGS_VISUALS_LIGHT_STYLE end,
+        func = function(rect)
+            local index, meta = ugui.combobox({
+                uid = UID.LightStyle,
+                rectangle = rect,
+                items = Styles.theme_names(),
+                selected_index = Settings.light_style_index,
+            })
+            if meta.signal_change == ugui.signal_change_states.ended then
+                action.invoke(ACTION_SETTINGS_SET_LIGHT_STYLE, nil, nil, {
+                    style = Styles.theme_names()[index],
+                })
+            end
+        end,
+    },
+    {
+        visible = function() return Settings.active_style_index == 0 end,
+        text = function() return Locales.msg.SETTINGS_VISUALS_DARK_STYLE end,
+        func = function(rect)
+            local index, meta = ugui.combobox({
+                uid = UID.DarkStyle,
+                rectangle = rect,
+                items = Styles.theme_names(),
+                selected_index = Settings.dark_style_index,
+            })
+            if meta.signal_change == ugui.signal_change_states.ended then
+                action.invoke(ACTION_SETTINGS_SET_DARK_STYLE, nil, nil, {
+                    style = Styles.theme_names()[index],
+                })
+            end
+        end,
+    },
+    {
+        text = function() return Locales.msg.SETTINGS_VISUALS_LOCALE end,
         func = function(rect)
             local new_locale_index, meta = ugui.combobox({
                 uid = UID.Locale,
@@ -78,11 +116,38 @@ local visual_items = {
         end,
     },
     {
-        text = function() return Locales.str('SETTINGS_VISUALS_NOTIFICATIONS') end,
+        text = function() return Locales.msg.SETTINGS_VISUALS_ANIMATIONS end,
+        func = function(rect)
+            local modes = { 'system', 'enabled', 'fast', 'disabled' }
+            local selected_index = 1
+            for i, mode in ipairs(modes) do
+                if Settings.animations == mode then
+                    selected_index = i
+                    break
+                end
+            end
+            local index, meta = ugui.combobox({
+                uid = UID.Animations,
+                rectangle = rect,
+                items = {
+                    Locales.msg.SETTINGS_VISUALS_ANIMATIONS_SYSTEM,
+                    Locales.msg.SETTINGS_VISUALS_ANIMATIONS_ENABLED,
+                    Locales.msg.SETTINGS_VISUALS_ANIMATIONS_FAST,
+                    Locales.msg.SETTINGS_VISUALS_ANIMATIONS_DISABLED,
+                },
+                selected_index = selected_index,
+            })
+            if meta.signal_change == ugui.signal_change_states.ended then
+                action.invoke(ACTION_SETTINGS_SET_ANIMATIONS, nil, nil, { animations = modes[index] })
+            end
+        end,
+    },
+    {
+        text = function() return Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS end,
         func = function(rect)
             local notification_styles = {
-                Locales.str('SETTINGS_VISUALS_NOTIFICATIONS_BUBBLE'),
-                Locales.str('SETTINGS_VISUALS_NOTIFICATIONS_CONSOLE'),
+                Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS_BUBBLE,
+                Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS_CONSOLE,
             }
 
             local _, meta = ugui.carrousel_button({
@@ -90,7 +155,7 @@ local visual_items = {
                 rectangle = rect,
                 items = notification_styles,
                 selected_index = Settings.notification_style,
-                tooltip = Locales.str('SETTINGS_VISUALS_NOTIFICATIONS_TOOLTIP'),
+                tooltip = Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS_TOOLTIP,
             })
 
             if meta.signal_change == ugui.signal_change_states.started then
@@ -99,12 +164,12 @@ local visual_items = {
         end,
     },
     {
-        text = function() return Locales.str('SETTINGS_VISUALS_FF_FPS') end,
+        text = function() return Locales.msg.SETTINGS_VISUALS_FF_FPS end,
         func = function(rect)
             local value, meta = ugui.numberbox({
                 uid = UID.RepaintThrottle,
                 rectangle = rect,
-                tooltip = Locales.str('SETTINGS_VISUALS_FF_FPS_TOOLTIP'),
+                tooltip = Locales.msg.SETTINGS_VISUALS_FF_FPS_TOOLTIP,
                 value = Settings.ff_fps,
                 places = 2,
             })
@@ -121,14 +186,14 @@ local interaction_items = {
     {
         show_label = false,
         control_width = 7.5,
-        text = function() return Locales.str('SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT') end,
+        text = function() return Locales.msg.SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT end,
         func = function(rect)
             local _, meta = ugui.toggle_button({
                 uid = UID.EnableManualOnJoystickInteract,
                 rectangle = rect,
                 is_checked = Settings.enable_manual_on_joystick_interact,
-                text = Locales.str('SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT'),
-                tooltip = Locales.str('SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT_TOOLTIP'),
+                text = Locales.msg.SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT,
+                tooltip = Locales.msg.SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT_TOOLTIP,
             })
             if meta.signal_change == ugui.signal_change_states.started then
                 action.invoke(ACTION_SETTINGS_TOGGLE_MANUAL_ON_JOYSTICK)
@@ -138,14 +203,14 @@ local interaction_items = {
     {
         show_label = false,
         control_width = 7.5,
-        text = function() return Locales.str('SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE') end,
+        text = function() return Locales.msg.SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE end,
         func = function(rect)
             local _, meta = ugui.toggle_button({
                 uid = UID.LockHotkeysWhenControlActive,
                 rectangle = rect,
                 is_checked = Settings.lock_hotkeys_when_control_active,
-                text = Locales.str('SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE'),
-                tooltip = Locales.str('SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE_TOOLTIP'),
+                text = Locales.msg.SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE,
+                tooltip = Locales.msg.SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE_TOOLTIP,
             })
             if meta.signal_change == ugui.signal_change_states.started then
                 action.invoke(ACTION_SETTINGS_TOGGLE_LOCK_HOTKEYS)
@@ -155,6 +220,10 @@ local interaction_items = {
 }
 
 local function draw_setting_item(item, y, label_uid)
+    if item.visible and not item.visible() then
+        return y
+    end
+
     local theme = Styles.theme()
     local foreground_color = Drawing.foreground_color()
 
@@ -184,7 +253,7 @@ local function draw_setting_item(item, y, label_uid)
     return y + (item.row_height or 1.25)
 end
 
-local function draw_group(group, y)
+local function draw_group(group, y, content_uid)
     local theme = Styles.theme()
     local foreground_color = Drawing.foreground_color()
     local label_text = group.text()
@@ -238,9 +307,15 @@ local function draw_group(group, y)
 
     y = y + 1.1
     if new_expanded then
-        for item_index = 1, #group.items, 1 do
-            y = draw_setting_item(group.items[item_index], y, group.item_label_uid_base + item_index - 1)
-        end
+        ugui.panel({
+            uid = content_uid,
+            rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
+            transition = ugui.transition.fly({ x = 0, y = -5, duration = Settings.animations == 'fast' and 0.1 or nil }),
+        }, function()
+            for item_index = 1, #group.items, 1 do
+                y = draw_setting_item(group.items[item_index], y, group.item_label_uid_base + item_index - 1)
+            end
+        end)
         return y + 0.3
     end
     return y
@@ -270,7 +345,7 @@ local varwatch_items = {
                 selected_index = selected_var_index,
                 items = lualinq.select(Settings.variables, function(x)
                     if not x.visible then
-                        return x.identifier .. ' ' .. Locales.str('SETTINGS_VARWATCH_DISABLED')
+                        return x.identifier .. ' ' .. Locales.msg.SETTINGS_VARWATCH_DISABLED
                     end
                     return x.identifier
                 end),
@@ -302,24 +377,25 @@ local varwatch_items = {
             Settings.variables[selected_var_index].visible = not ugui.toggle_button({
                 uid = UID.HideVar,
                 rectangle = { x = rect.x + (button_size + button_gap) * 2, y = button_y, width = button_size * 2, height = button_size },
-                text = Locales.str('SETTINGS_VARWATCH_HIDE'),
+                text = Locales.msg.SETTINGS_VARWATCH_HIDE,
                 is_checked = not Settings.variables[selected_var_index].visible,
             })
         end,
     },
     {
-        text = function() return Locales.str('SETTINGS_VARWATCH_ANGLE_FORMAT') end,
+        text = function() return Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT end,
         func = function(rect)
             local formats = {
-                Locales.str('SETTINGS_VARWATCH_ANGLE_FORMAT_SHORT'),
-                Locales.str('SETTINGS_VARWATCH_ANGLE_FORMAT_DEGREE'),
+                Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT_SHORT,
+                Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT_DEGREE,
+                Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT_HAU,
             }
             local new_format_index, meta = ugui.carrousel_button({
                 uid = UID.AngleFormat,
                 rectangle = rect,
                 items = formats,
-                selected_index = Settings.format_angles_degrees and 2 or 1,
-                tooltip = Locales.str('SETTINGS_VARWATCH_ANGLE_FORMAT_TOOLTIP'),
+                selected_index = Settings.format_angles_hau and 3 or Settings.format_angles_degrees and 2 or 1,
+                tooltip = Locales.msg.SETTINGS_VARWATCH_ANGLE_FORMAT_TOOLTIP,
             })
             if meta.signal_change == ugui.signal_change_states.started then
                 action.invoke(ACTION_SETTINGS_SET_ANGLE_FORMAT, nil, nil, {
@@ -329,14 +405,14 @@ local varwatch_items = {
         end,
     },
     {
-        text = function() return Locales.str('SETTINGS_VARWATCH_DECIMAL_POINTS') end,
+        text = function() return Locales.msg.SETTINGS_VARWATCH_DECIMAL_POINTS end,
         func = function(rect)
             local value, meta = ugui.numberbox({
                 uid = UID.DecimalPlaces,
                 rectangle = rect,
                 value = Settings.format_decimal_points,
                 places = 1,
-                tooltip = Locales.str('SETTINGS_VARWATCH_DECIMAL_POINTS_TOOLTIP'),
+                tooltip = Locales.msg.SETTINGS_VARWATCH_DECIMAL_POINTS_TOOLTIP,
             })
             local new_decimal_points = math.abs(value)
             if meta.signal_change == ugui.signal_change_states.started or
@@ -352,20 +428,20 @@ local varwatch_items = {
 local memory_items = {
     {
         show_label = false,
-        text = function() return Locales.str('SETTINGS_MEMORY_FILE_SELECT') end,
+        text = function() return Locales.msg.SETTINGS_MEMORY_FILE_SELECT end,
         func = function(rect)
             if ugui.button({
                     uid = UID.LoadMapFile,
                     rectangle = rect,
-                    text = Locales.str('SETTINGS_MEMORY_FILE_SELECT'),
-                    tooltip = Locales.str('SETTINGS_MEMORY_FILE_SELECT_TOOLTIP'),
+                    text = Locales.msg.SETTINGS_MEMORY_FILE_SELECT,
+                    tooltip = Locales.msg.SETTINGS_MEMORY_FILE_SELECT_TOOLTIP,
                 }) then
                 action.invoke(ACTION_SETTINGS_SELECT_MAP_FILE)
             end
         end,
     },
     {
-        text = function() return Locales.str('SETTINGS_MEMORY_REGION') end,
+        text = function() return Locales.msg.SETTINGS_MEMORY_REGION end,
         func = function(rect)
             local region_names = lualinq.select(Addresses, function(addr) return addr.name() end)
             local new_region_index, meta = ugui.combobox({
@@ -373,7 +449,7 @@ local memory_items = {
                 rectangle = rect,
                 items = region_names,
                 selected_index = Settings.address_source_index,
-                tooltip = Locales.str('SETTINGS_MEMORY_REGION_TOOLTIP'),
+                tooltip = Locales.msg.SETTINGS_MEMORY_REGION_TOOLTIP,
             })
             if meta.signal_change == ugui.signal_change_states.ended then
                 action.invoke(ACTION_SETTINGS_SET_REGION, nil, nil, {
@@ -384,13 +460,13 @@ local memory_items = {
     },
     {
         show_label = false,
-        text = function() return Locales.str('SETTINGS_MEMORY_DETECT_NOW') end,
+        text = function() return Locales.msg.SETTINGS_MEMORY_DETECT_NOW end,
         func = function(rect)
             if ugui.button({
                     uid = UID.AutoDetect,
                     rectangle = rect,
-                    text = Locales.str('SETTINGS_MEMORY_DETECT_NOW'),
-                    tooltip = Locales.str('SETTINGS_MEMORY_DETECT_NOW_TOOLTIP'),
+                    text = Locales.msg.SETTINGS_MEMORY_DETECT_NOW,
+                    tooltip = Locales.msg.SETTINGS_MEMORY_DETECT_NOW_TOOLTIP,
                 }) then
                 action.invoke(ACTION_SETTINGS_AUTODETECT_NOW)
             end
@@ -398,14 +474,14 @@ local memory_items = {
     },
     {
         show_label = false,
-        text = function() return Locales.str('SETTINGS_MEMORY_DETECT_ON_START') end,
+        text = function() return Locales.msg.SETTINGS_MEMORY_DETECT_ON_START end,
         func = function(rect)
             local _, meta = ugui.toggle_button({
                 uid = UID.DetectOnStart,
                 rectangle = rect,
-                text = Locales.str('SETTINGS_MEMORY_DETECT_ON_START'),
+                text = Locales.msg.SETTINGS_MEMORY_DETECT_ON_START,
                 is_checked = Settings.autodetect_address,
-                tooltip = Locales.str('SETTINGS_MEMORY_DETECT_ON_START_TOOLTIP'),
+                tooltip = Locales.msg.SETTINGS_MEMORY_DETECT_ON_START_TOOLTIP,
             })
             if meta.signal_change == ugui.signal_change_states.started then
                 action.invoke(ACTION_SETTINGS_TOGGLE_AUTODETECT)
@@ -419,7 +495,7 @@ local groups = {
         uid = UID.VisualGroup,
         label_uid = UID.VisualGroupLabel,
         item_label_uid_base = UID.VisualItemLabelBase,
-        text = function() return Locales.str('SETTINGS_VISUALS_TAB_NAME') end,
+        text = function() return Locales.msg.SETTINGS_VISUALS_TAB_NAME end,
         items = visual_items,
         expanded_setting = 'settings_visuals_expanded',
     },
@@ -427,7 +503,7 @@ local groups = {
         uid = UID.InteractionGroup,
         label_uid = UID.InteractionGroupLabel,
         item_label_uid_base = UID.InteractionItemLabelBase,
-        text = function() return Locales.str('SETTINGS_INTERACTION_TAB_NAME') end,
+        text = function() return Locales.msg.SETTINGS_INTERACTION_TAB_NAME end,
         items = interaction_items,
         expanded_setting = 'settings_interaction_expanded',
     },
@@ -435,7 +511,7 @@ local groups = {
         uid = UID.MemoryGroup,
         label_uid = UID.MemoryGroupLabel,
         item_label_uid_base = UID.MemoryItemLabelBase,
-        text = function() return Locales.str('SETTINGS_MEMORY_TAB_NAME') end,
+        text = function() return Locales.msg.SETTINGS_MEMORY_TAB_NAME end,
         items = memory_items,
         expanded_setting = 'settings_memory_expanded',
     },
@@ -443,7 +519,7 @@ local groups = {
         uid = UID.VarWatchGroup,
         label_uid = UID.VarWatchGroupLabel,
         item_label_uid_base = UID.VarWatchItemLabelBase,
-        text = function() return Locales.str('SETTINGS_VARWATCH_TAB_NAME') end,
+        text = function() return Locales.msg.SETTINGS_VARWATCH_TAB_NAME end,
         items = varwatch_items,
         expanded_setting = 'settings_varwatch_expanded',
     },
@@ -452,13 +528,13 @@ local groups = {
 local function draw_groups()
     local y = 0.2
     for i = 1, #groups, 1 do
-        y = draw_group(groups[i], y)
+        y = draw_group(groups[i], y, UID.GroupContentPanels + i - 1)
     end
     content_height = y
 end
 
 return {
-    name = function() return Locales.str('SETTINGS_TAB_NAME') end,
+    name = function() return Locales.msg.SETTINGS_TAB_NAME end,
     draw = function()
         local scrollbar_rectangle = grid_rect(7.5, 0, 0.5, VIEWPORT_HEIGHT)
         if Settings.navbar_visible then

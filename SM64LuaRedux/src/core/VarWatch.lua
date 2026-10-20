@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@alias VarWatchEntry { label: string?, value: string }
@@ -19,8 +19,8 @@ VarWatch.var_funcs = {
         local angle = (Settings.show_effective_angles and Engine.get_effective_angle(Memory.current.mario_facing_yaw) or Memory.current.mario_facing_yaw)
         local opposite = (Settings.show_effective_angles and (Engine.get_effective_angle(Memory.current.mario_facing_yaw) + 32768) % 65536 or (Memory.current.mario_facing_yaw + 32768) % 65536)
         return {
-            label = Locales.str('VARWATCH_FACING_YAW_LABEL'),
-            value = string.format(Locales.str('VARWATCH_FACING_YAW'),
+            label = Locales.msg.VARWATCH_FACING_YAW_LABEL,
+            value = string.format(Locales.msg.VARWATCH_FACING_YAW,
                 Formatter.angle(angle), Formatter.angle(opposite))
         }
     end,
@@ -28,24 +28,24 @@ VarWatch.var_funcs = {
         local angle = (Settings.show_effective_angles and Engine.get_effective_angle(Memory.current.mario_intended_yaw) or Memory.current.mario_intended_yaw)
         local opposite = (Settings.show_effective_angles and (Engine.get_effective_angle(Memory.current.mario_intended_yaw) + 32768) % 65536 or (Memory.current.mario_intended_yaw + 32768) % 65536)
         return {
-            label = Locales.str('VARWATCH_INTENDED_YAW_LABEL'),
+            label = Locales.msg.VARWATCH_INTENDED_YAW_LABEL,
             value = string.format(
-                Locales.str('VARWATCH_INTENDED_YAW'), Formatter.angle(angle), Formatter.angle(opposite))
+                Locales.msg.VARWATCH_INTENDED_YAW, Formatter.angle(angle), Formatter.angle(opposite))
         }
     end,
     ['h_spd'] = function()
         local h_speed = Memory.current.mario_h_speed
         local h_sliding_speed = Engine.get_h_sliding_speed()
         return {
-            label = Locales.str('VARWATCH_H_SPEED_LABEL'),
-            value = string.format(Locales.str('VARWATCH_H_SPEED'),
+            label = Locales.msg.VARWATCH_H_SPEED_LABEL,
+            value = string.format(Locales.msg.VARWATCH_H_SPEED,
                 Formatter.ups(h_speed), Formatter.ups(h_sliding_speed))
         }
     end,
     ['v_spd'] = function()
         local y_speed = Memory.current.mario_v_speed
         return {
-            label = Locales.str('VARWATCH_Y_SPEED_LABEL'),
+            label = Locales.msg.VARWATCH_Y_SPEED_LABEL,
             value = Formatter.ups(y_speed)
         }
     end,
@@ -56,79 +56,79 @@ VarWatch.var_funcs = {
         local full = string.format("%s (%s)", percentage, fraction)
 
         return {
-            label = Locales.str('VARWATCH_SPD_EFFICIENCY_LABEL'),
+            label = Locales.msg.VARWATCH_SPD_EFFICIENCY_LABEL,
             value = full
         }
     end,
     ['position_x'] = function()
         return {
-            label = Locales.str('VARWATCH_POS_X_LABEL'),
+            label = Locales.msg.VARWATCH_POS_X_LABEL,
             value = Formatter.u(Memory.current.mario_x)
         }
     end,
     ['position_y'] = function()
         return {
-            label = Locales.str('VARWATCH_POS_Y_LABEL'),
+            label = Locales.msg.VARWATCH_POS_Y_LABEL,
             value = Formatter.u(Memory.current.mario_y)
         }
     end,
     ['position_z'] = function()
         return {
-            label = Locales.str('VARWATCH_POS_Z_LABEL'),
+            label = Locales.msg.VARWATCH_POS_Z_LABEL,
             value = Formatter.u(Memory.current.mario_z)
         }
     end,
     ['pitch'] = function()
         return {
-            label = Locales.str('VARWATCH_PITCH_LABEL'),
+            label = Locales.msg.VARWATCH_PITCH_LABEL,
             value = Formatter.angle(Memory.current.mario_pitch)
         }
     end,
     ['yaw_vel'] = function()
         return {
-            label = Locales.str('VARWATCH_YAW_VEL_LABEL'),
+            label = Locales.msg.VARWATCH_YAW_VEL_LABEL,
             value = Formatter.angle(Memory.current.mario_yaw_vel)
         }
     end,
     ['pitch_vel'] = function()
         return {
-            label = Locales.str('VARWATCH_PITCH_VEL_LABEL'),
+            label = Locales.msg.VARWATCH_PITCH_VEL_LABEL,
             value = Formatter.angle(Memory.current.mario_pitch_vel)
         }
     end,
     ['xz_movement'] = function()
         return {
-            label = Locales.str('VARWATCH_XZ_MOVEMENT_LABEL'),
+            label = Locales.msg.VARWATCH_XZ_MOVEMENT_LABEL,
             value = Formatter.u(Engine.get_xz_distance_moved_since_last_frame())
         }
     end,
     ['action'] = function()
         local name = Locales.raw().ACTIONS[Memory.current.mario_action]
-        local fallback = Locales.str('VARWATCH_UNKNOWN_ACTION') .. Memory.current.mario_action
+        local fallback = Locales.msg.VARWATCH_UNKNOWN_ACTION .. Memory.current.mario_action
         return {
-            label = Locales.str('VARWATCH_ACTION_LABEL'),
+            label = Locales.msg.VARWATCH_ACTION_LABEL,
             value = (name or fallback)
         }
     end,
     ['rng'] = function()
         return {
-            label = Locales.str('VARWATCH_RNG_LABEL'),
+            label = Locales.msg.VARWATCH_RNG_LABEL,
             value = string.format("%d (%s %d)",
                 Memory.current.rng_value,
-                Locales.str('VARWATCH_RNG_INDEX_LABEL'),
+                Locales.msg.VARWATCH_RNG_INDEX_LABEL,
                 RNG.get_index(Memory.current.rng_value))
         }
     end,
     ['global_timer'] = function()
         return {
-            label = Locales.str('VARWATCH_GLOBAL_TIMER_LABEL'),
+            label = Locales.msg.VARWATCH_GLOBAL_TIMER_LABEL,
             value = tostring(Memory.current.global_timer)
         }
     end,
     ['moved_dist'] = function()
         local dist = Settings.track_moved_distance and Engine.get_distance_moved() or Settings.moved_distance
         return {
-            label = Locales.str('VARWATCH_DIST_MOVED_LABEL'),
+            label = Locales.msg.VARWATCH_DIST_MOVED_LABEL,
             value = Formatter.u(dist)
         }
     end,

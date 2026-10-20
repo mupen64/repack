@@ -1,14 +1,13 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 Styles = {}
 
 local style_dir_names = {
     'windows-11',
-    'windows-11-v2',
     'windows-11-dark',
     'windows-10',
     'windows-10-dark',
@@ -27,6 +26,8 @@ local style_names = {}
 
 ---@type unknown TODO: Type!
 local current_style = {}
+local current_style_index
+local cached_system_theme
 
 local standard_styler_params_clone = ugui.internal.deep_clone(ugui.standard_styler.params)
 
@@ -47,14 +48,23 @@ for i = 1, #style_dir_names, 1 do
     style_names[i] = style.name
 end
 
+local function resolved_style_index()
+    if Settings.active_style_index == 0 then
+        return cached_system_theme == 'dark' and Settings.dark_style_index or Settings.light_style_index
+    end
+    return Settings.active_style_index
+end
+
 Styles.update_style = function()
-    local paths = get_style_paths(style_dir_names[Settings.active_style_index])
+    local index = resolved_style_index()
+    local paths = get_style_paths(style_dir_names[index])
 
     local style = dofile(paths.def_path)
     style.theme.path = paths.img_path
     style.theme = deep_merge(ugui.internal.deep_clone(standard_styler_params_clone), style.theme)
 
     current_style = style
+    current_style_index = index
 
     local theme = style.theme
 
@@ -72,10 +82,30 @@ Styles.update_style = function()
     ugui.standard_styler.draw_icon = prev_draw_icon
 end
 
+Styles.refresh_system_style = function()
+    local system_theme = emu.get_pref('theme')
+    if system_theme == cached_system_theme then
+        return
+    end
+    cached_system_theme = system_theme
+
+    if Settings.active_style_index == 0 and resolved_style_index() ~= current_style_index then
+        Styles.update_style()
+    end
+end
+
 Styles.theme = function()
     return current_style.theme
 end
 
 Styles.theme_names = function()
     return style_names
+end
+
+Styles.style_options = function()
+    local options = { 'System' }
+    for i = 1, #style_names do
+        options[#options + 1] = style_names[i]
+    end
+    return options
 end

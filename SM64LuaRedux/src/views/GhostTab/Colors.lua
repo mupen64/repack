@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 -- color helpers shared by the ghost tab's color pickers; colors are {r, g, b} arrays of 0-255 integers

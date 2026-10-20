@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 HOTKEY_MODE_ONESHOT = 0
@@ -58,9 +58,12 @@ Settings = {
     atan_exp = 0,
     format_decimal_points = 4,
     format_angles_degrees = false,
+    format_angles_hau = false,
     worldviz_enabled = false,
     truncate_effective_angle = false,
-    active_style_index = 2,
+    active_style_index = 0,
+    light_style_index = 1,
+    dark_style_index = 2,
     locale_index = 1,
     tab_index = 1,
     navbar_visible = true,
@@ -95,6 +98,7 @@ Settings = {
     dump_start_frame = 0,
     dump_movie_start_frame = 0,
     notification_style = NOTIFICATION_STYLE_BUBBLE,
+    animations = 'system',
     hotkeys_enabled = true,
     hotkeys_assigning = false,
     hotkeys_selected_index = 1,

@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local Objects = {}
@@ -58,7 +58,7 @@ function Objects.get_name(address)
 		return "Unknown Object"
 	end
 	local segmented = 0x13000000 + offset
-	if address_source.name() == Locales.str('ADDRESS_JAPAN') then
+	if address_source.name() == Locales.msg.ADDRESS_JAPAN then
 		segmented = align_jp(segmented)
 	end
 
