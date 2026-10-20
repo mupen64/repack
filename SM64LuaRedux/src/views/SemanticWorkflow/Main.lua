@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 dofile(views_path .. 'SemanticWorkflow/Version.lua')
@@ -113,6 +113,9 @@ end
 
 local Tabs = dofile(views_path .. 'SemanticWorkflow/Tabs.lua')
 local selected_tab_index = 1
+local previous_tab_index = selected_tab_index
+local tab_transition_x = 10
+local tab_out_transition = ugui.transition.fly({ x = -10, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
 
 local function draw_factory(theme)
     local uid_counter = 0
@@ -166,7 +169,7 @@ function CurrentSemanticWorkflowOverride()
 end
 
 return {
-    name = function() return Locales.str('SEMANTIC_WORKFLOW_TAB_NAME') end,
+    name = function() return Locales.msg.SEMANTIC_WORKFLOW_TAB_NAME end,
     draw = function()
         -- if we're showing any dialog, stop rendering anything else
         if SemanticWorkflowDialog ~= nil then
@@ -200,14 +203,28 @@ return {
                     uid = UID.ToggleHelp,
                     rectangle = grid_rect(7, 0, 1, 1),
                     text = '?',
-                    tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_SHOW_TOOL_TIP'),
+                    tooltip = Locales.msg.SEMANTIC_WORKFLOW_HELP_SHOW_TOOL_TIP,
                     is_enabled = Tabs[selected_tab_index].help_key ~= nil,
                 }
             ) then
             SemanticWorkflowDialog = Help.GetDialog(Tabs[selected_tab_index].help_key)
         end
 
-        Tabs[selected_tab_index].render(draw)
+        if selected_tab_index ~= previous_tab_index then
+            tab_transition_x = selected_tab_index > previous_tab_index and 10 or -10
+            tab_out_transition.tick = ugui.transition.fly({ x = -tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+            previous_tab_index = selected_tab_index
+        end
+        tab_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+
+        ugui.panel({
+            uid = UID.TabPanels + selected_tab_index - 1,
+            rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
+            in_transition = ugui.transition.fly({ x = tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+            out_transition = tab_out_transition,
+        }, function()
+            Tabs[selected_tab_index].render(draw)
+        end)
 
         ugui.listbox({
             uid = UID.VarWatch,

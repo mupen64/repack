@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('GhostSettings', function(enum_next)
@@ -37,30 +37,30 @@ local picker_original = nil
 local base_offset_text = nil
 
 return {
-    name = function() return Locales.str('SETTINGS_TAB_NAME') end,
+    name = function() return Locales.msg.SETTINGS_TAB_NAME end,
     draw = function()
         local theme = Styles.theme()
 
         Settings.ghost_recording_auto_load = ugui.toggle_button({
             uid = UID.AutoLoad,
             rectangle = grid_rect(0.1, 1, 7.8, 1),
-            text = Locales.str('GHOST_SETTINGS_AUTO_LOAD'),
-            tooltip = Locales.str('GHOST_SETTINGS_AUTO_LOAD_TOOLTIP'),
+            text = Locales.msg.GHOST_SETTINGS_AUTO_LOAD,
+            tooltip = Locales.msg.GHOST_SETTINGS_AUTO_LOAD_TOOLTIP,
             is_checked = Settings.ghost_recording_auto_load,
         })
 
         Settings.ghost_transparent_default = ugui.toggle_button({
             uid = UID.TransparentDefault,
             rectangle = grid_rect(0.1, 2, 7.8, 1),
-            text = Locales.str('GHOST_SETTINGS_TRANSPARENT_DEFAULT'),
-            tooltip = Locales.str('GHOST_SETTINGS_TRANSPARENT_DEFAULT_TOOLTIP'),
+            text = Locales.msg.GHOST_SETTINGS_TRANSPARENT_DEFAULT,
+            tooltip = Locales.msg.GHOST_SETTINGS_TRANSPARENT_DEFAULT_TOOLTIP,
             is_checked = Settings.ghost_transparent_default,
         })
 
         ugui.label({
             uid = UID.BaseOffsetLabel,
             rectangle = grid_rect(0.1, 3, 4, 1),
-            text = Locales.str('GHOST_SETTINGS_BASE_OFFSET'),
+            text = Locales.msg.GHOST_SETTINGS_BASE_OFFSET,
             color = Drawing.foreground_color(),
             font_size = theme.font_size * 1.25,
             font_name = theme.font_name,
@@ -78,7 +78,7 @@ return {
             uid = UID.BaseOffset,
             rectangle = grid_rect(4.1, 3.1, 3.8, 0.8),
             text = base_offset_text,
-            tooltip = Locales.str('GHOST_SETTINGS_BASE_OFFSET_TOOLTIP'),
+            tooltip = Locales.msg.GHOST_SETTINGS_BASE_OFFSET_TOOLTIP,
             styler_mixin = {
                 font_size = theme.font_size * 1.25,
             },
@@ -95,16 +95,16 @@ return {
         Settings.ghost_playback_warning_accepted = not ugui.toggle_button({
             uid = UID.ShowPlaybackWarning,
             rectangle = grid_rect(0.1, 4, 7.8, 1),
-            text = Locales.str('GHOST_SETTINGS_SHOW_PLAYBACK_WARNING'),
-            tooltip = Locales.str('GHOST_SETTINGS_SHOW_PLAYBACK_WARNING_TOOLTIP'),
+            text = Locales.msg.GHOST_SETTINGS_SHOW_PLAYBACK_WARNING,
+            tooltip = Locales.msg.GHOST_SETTINGS_SHOW_PLAYBACK_WARNING_TOOLTIP,
             is_checked = not Settings.ghost_playback_warning_accepted,
         })
 
         Settings.ghost_overlay_data = ugui.toggle_button({
             uid = UID.OverlayData,
             rectangle = grid_rect(0.1, 5, 7.8, 1),
-            text = Locales.str('GHOST_SETTINGS_OVERLAY_DATA'),
-            tooltip = Locales.str('GHOST_SETTINGS_OVERLAY_DATA_TOOLTIP'),
+            text = Locales.msg.GHOST_SETTINGS_OVERLAY_DATA,
+            tooltip = Locales.msg.GHOST_SETTINGS_OVERLAY_DATA_TOOLTIP,
             is_checked = Settings.ghost_overlay_data or false,
         })
 
@@ -112,8 +112,8 @@ return {
         Settings.ghost_disable_body_movement = ugui.toggle_button({
             uid = UID.DisableBodyMovement,
             rectangle = grid_rect(0.1, 6, 7.8, 1),
-            text = Locales.str('GHOST_SETTINGS_DISABLE_BODY_MOVEMENT'),
-            tooltip = Locales.str('GHOST_SETTINGS_DISABLE_BODY_MOVEMENT_TOOLTIP'),
+            text = Locales.msg.GHOST_SETTINGS_DISABLE_BODY_MOVEMENT,
+            tooltip = Locales.msg.GHOST_SETTINGS_DISABLE_BODY_MOVEMENT_TOOLTIP,
             is_checked = Settings.ghost_disable_body_movement or false,
         })
 
@@ -121,7 +121,7 @@ return {
         ugui.label({
             uid = UID.RecordVariablesLabel,
             rectangle = grid_rect(0.1, 7, 7.8, 1),
-            text = Locales.str('GHOST_SETTINGS_RECORD_VARIABLES'),
+            text = Locales.msg.GHOST_SETTINGS_RECORD_VARIABLES,
             color = Drawing.foreground_color(),
             font_size = theme.font_size * 1.25,
             font_name = theme.font_name,
@@ -135,8 +135,8 @@ return {
             Settings.ghost_recorded_variables[variable.id] = ugui.toggle_button({
                 uid = UID.RecordVariables + (i - 1),
                 rectangle = grid_rect(0.1 + column * 3.9, 7.9 + row, 3.8, 1),
-                text = Locales.str(variable.locale),
-                tooltip = Locales.str('GHOST_SETTINGS_RECORD_VARIABLE_TOOLTIP'),
+                text = Locales.msg[variable.locale],
+                tooltip = Locales.msg.GHOST_SETTINGS_RECORD_VARIABLE_TOOLTIP,
                 is_checked = Settings.ghost_recorded_variables[variable.id] or false,
                 is_enabled = not Ghosts.is_recording(),
             })
@@ -146,7 +146,7 @@ return {
         ugui.label({
             uid = UID.HighlightColorLabel,
             rectangle = grid_rect(0.1, 11, 4.5, 1),
-            text = Locales.str('GHOST_SETTINGS_HIGHLIGHT_COLOR'),
+            text = Locales.msg.GHOST_SETTINGS_HIGHLIGHT_COLOR,
             color = Drawing.foreground_color(),
             font_size = theme.font_size * 1.25,
             font_name = theme.font_name,
@@ -162,7 +162,7 @@ return {
             uid = UID.HighlightColor,
             rectangle = grid_rect(4.6, 11.1, 2.3, 0.8),
             text = highlight_text,
-            tooltip = Locales.str('GHOST_SETTINGS_HIGHLIGHT_COLOR_TOOLTIP'),
+            tooltip = Locales.msg.GHOST_SETTINGS_HIGHLIGHT_COLOR_TOOLTIP,
             styler_mixin = {
                 font_size = theme.font_size * 1.25,
             },
@@ -177,7 +177,7 @@ return {
             uid = UID.HighlightColorPickerButton,
             rectangle = swatch_rect,
             text = '',
-            tooltip = Locales.str('GHOST_COLOR_PICKER_TOOLTIP'),
+            tooltip = Locales.msg.GHOST_COLOR_PICKER_TOOLTIP,
         })
         -- the panel isn't hittestable, so clicks still reach the button underneath
         ugui.panel({
@@ -210,8 +210,8 @@ return {
             if ugui.button({
                     uid = UID.HighlightColorPickerOk,
                     rectangle = grid_rect(3.3, 12.1, 2.1, 0.8),
-                    text = Locales.str('GHOST_COLOR_PICKER_OK'),
-                    tooltip = Locales.str('GHOST_COLOR_PICKER_OK_TOOLTIP'),
+                    text = Locales.msg.GHOST_COLOR_PICKER_OK,
+                    tooltip = Locales.msg.GHOST_COLOR_PICKER_OK_TOOLTIP,
                 }) then
                 picker_open = false
             end
@@ -219,8 +219,8 @@ return {
             if ugui.button({
                     uid = UID.HighlightColorPickerCancel,
                     rectangle = grid_rect(5.5, 12.1, 2.1, 0.8),
-                    text = Locales.str('GHOST_COLOR_PICKER_CANCEL'),
-                    tooltip = Locales.str('GHOST_COLOR_PICKER_CANCEL_TOOLTIP'),
+                    text = Locales.msg.GHOST_COLOR_PICKER_CANCEL,
+                    tooltip = Locales.msg.GHOST_COLOR_PICKER_CANCEL_TOOLTIP,
                 }) then
                 color = picker_original
                 picker_open = false

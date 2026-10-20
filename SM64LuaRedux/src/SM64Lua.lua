@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 folder = debug.getinfo(1).source:sub(2):match('(.*\\)')
@@ -9,19 +9,19 @@ styles_path = folder .. 'res\\styles\\'
 locales_path = folder .. 'res\\lang\\'
 views_path = folder .. 'views\\'
 core_path = folder .. 'core\\'
-lib_path = folder .. '..\\lib\\'
+vendor_path = folder .. '..\\vendor\\'
 processors_path = folder .. 'processors\\'
 
 ---@module 'breitbandgraphics-amalgamated'
-BreitbandGraphics = dofile(lib_path .. 'breitbandgraphics-amalgamated.lua')
+BreitbandGraphics = dofile(vendor_path .. 'breitbandgraphics-amalgamated.lua')
 
 ---@module 'ugui-amalgamated'
-ugui = dofile(lib_path .. 'ugui-amalgamated.lua')
+ugui = dofile(vendor_path .. 'ugui-amalgamated.lua')
 
 ---@module 'linq'
-lualinq = dofile(lib_path .. 'linq.lua')
+lualinq = dofile(vendor_path .. 'linq.lua')
 
-json = dofile(lib_path .. 'json.lua')
+json = dofile(vendor_path .. 'json.lua')
 
 dofile(styles_path .. 'base_style.lua')
 dofile(core_path .. 'UIDProvider.lua')
@@ -97,6 +97,7 @@ local UID = UIDProvider.allocate_once('SM64Lua', function(enum_next)
     return {
         TabIndex = enum_next(),
         PresetIndex = enum_next(),
+        ViewPanels = enum_next(#views),
     }
 end)
 
@@ -218,13 +219,13 @@ local function draw_navbar()
     local preset_picker_rect = grid_rect(5.5, 16, 2.5, 1)
 
     local preset_items = lualinq.select(Presets.persistent.presets, function(_, i)
-        return Locales.str('PRESET') .. i
+        return Locales.msg.PRESET .. i
     end)
-    preset_items[#preset_items + 1] = Locales.str('PRESET') .. (#Presets.persistent.presets + 1)
+    preset_items[#preset_items + 1] = Locales.msg.PRESET .. (#Presets.persistent.presets + 1)
 
     local preset_context_menu = {
-        { text = Locales.str('GENERIC_RESET') },
-        { text = Locales.str('PRESET_CONTEXT_MENU_DELETE_ALL') },
+        { text = Locales.msg.GENERIC_RESET },
+        { text = Locales.msg.PRESET_CONTEXT_MENU_DELETE_ALL },
     }
     local preset_index, preset_meta = ugui.carrousel_button({
         uid = UID.PresetIndex,
@@ -248,7 +249,14 @@ local function draw_navbar()
     end
 end
 
+local previous_tab_index = Settings.tab_index
+local view_transition_x = -5
+local view_out_transition = ugui.transition.fly({ x = 5, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
+
 local function atdrawd2d()
+    ugui.PREFERS_REDUCED_MOTION = Settings.animations == 'disabled'
+    view_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+    Styles.refresh_system_style()
     d2d.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
 
     if d2d and d2d.clear then
@@ -285,7 +293,7 @@ local function atdrawd2d()
     WorldVisualizer.draw()
     MiniVisualizer.draw()
     GhostTab_draw_ghost_overlay(
-        views[Settings.tab_index].name() == Locales.str('SEMANTIC_WORKFLOW_TAB_NAME') and 6 or 0
+        views[Settings.tab_index].name() == Locales.msg.SEMANTIC_WORKFLOW_TAB_NAME and 6 or 0
     )
     Notifications.draw()
 
@@ -300,8 +308,22 @@ local function atdrawd2d()
         local one_cell_height = grid_rect(0, 0, 0, 1.25).height
         Drawing.push_offset(0, one_cell_height / 2)
     end
-    views[Settings.tab_index].draw()
-    Drawing.pop_offset()
+    if Settings.tab_index ~= previous_tab_index then
+        local forward_distance = (Settings.tab_index - previous_tab_index) % #views
+        view_transition_x = forward_distance <= #views / 2 and 10 or -10
+        view_out_transition.tick = ugui.transition.fly({ x = -view_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+        previous_tab_index = Settings.tab_index
+    end
+
+    ugui.panel({
+        uid = UID.ViewPanels + Settings.tab_index - 1,
+        rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
+        in_transition = ugui.transition.fly({ x = view_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+        out_transition = view_out_transition,
+    }, function()
+        views[Settings.tab_index].draw()
+        Drawing.pop_offset()
+    end)
 
     execute_defer_before_navbar_queue()
     draw_navbar()

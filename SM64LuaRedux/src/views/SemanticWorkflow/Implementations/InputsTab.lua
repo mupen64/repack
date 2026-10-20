@@ -1,15 +1,15 @@
 
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@type InputsTab
 ---@diagnostic disable-next-line: assign-type-mismatch
 local __impl = __impl
 
-__impl.name = function() return Locales.str('SEMANTIC_WORKFLOW_INPUTS_TAB_NAME') end
+__impl.name = function() return Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TAB_NAME end
 __impl.help_key = 'INPUTS_TAB'
 
 ---@type InputListGui
@@ -82,14 +82,14 @@ end
 local end_action_search_text = nil
 
 local function controls_for_end_action(input, draw, column, top)
-    draw:text(grid_rect(column, top, 4, LABEL_HEIGHT), 'start', Locales.str('SEMANTIC_WORKFLOW_INPUTS_END_ACTION'))
+    draw:text(grid_rect(column, top, 4, LABEL_HEIGHT), 'start', Locales.msg.SEMANTIC_WORKFLOW_INPUTS_END_ACTION)
     if end_action_search_text == nil then
         -- end action "dropdown" is not visible
         if ugui.button({
                 uid = UID.EndAction,
                 rectangle = grid_rect(column, top + LABEL_HEIGHT, 4, Gui.MEDIUM_CONTROL_HEIGHT),
                 text = Locales.action(input.end_action),
-                tooltip = Locales.str('SEMANTIC_WORKFLOW_INPUTS_END_ACTION_TOOL_TIP'),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_END_ACTION_TOOL_TIP,
             }) then
             end_action_search_text = ''
             ugui.internal.keyboard_captured_control = UID.EndActionTextbox
@@ -102,7 +102,7 @@ local function controls_for_end_action(input, draw, column, top)
             uid = UID.EndActionTextbox,
             rectangle = grid_rect(column, top + LABEL_HEIGHT, 4, Gui.MEDIUM_CONTROL_HEIGHT),
             text = end_action_search_text,
-            tooltip = Locales.str('SEMANTIC_WORKFLOW_INPUTS_END_ACTION_TYPE_TO_SEARCH_TOOL_TIP'),
+            tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_END_ACTION_TYPE_TO_SEARCH_TOOL_TIP,
         }):lower()
         local i = 0
         local match_pattern = '^' .. end_action_search_text
@@ -152,7 +152,7 @@ local function controls_for_loop(input, draw, column, top)
         uid = UID.LoopToggle,
         rectangle = grid_rect(column, top, Gui.MEDIUM_CONTROL_HEIGHT, Gui.MEDIUM_CONTROL_HEIGHT),
         text = "[icon:loop]",
-        tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_LOOP_ENABLED_TOOL_TIP"),
+        tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_LOOP_ENABLED_TOOL_TIP,
         is_checked = had_loop,
         styler_mixin = { icon_size = 14 },
     })
@@ -179,15 +179,15 @@ local function controls_for_loop(input, draw, column, top)
             rectangle = grid_rect(column + 1, top, 2, Gui.MEDIUM_CONTROL_HEIGHT),
             places = 2,
             value = input.loop.count,
-            tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_LOOP_COUNT_TOOL_TIP"),
+            tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_LOOP_COUNT_TOOL_TIP,
         })
         any_changes = any_changes or old_count ~= input.loop.count
 
         if ugui.button({
             uid = UID.LoopSelectTarget,
             rectangle = grid_rect(column + 3, top, 3, Gui.MEDIUM_CONTROL_HEIGHT),
-            text = Locales.str("SEMANTIC_WORKFLOW_INPUTS_LOOP_TARGET"),
-            tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_LOOP_TARGET_TOOL_TIP"),
+            text = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_LOOP_TARGET,
+            tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_LOOP_TARGET_TOOL_TIP,
         }) then
             InputListGui.special_select_handler = function(selection)
                 local sheet = SemanticWorkflowProject:asserted_current()
@@ -228,14 +228,14 @@ local function section_controls_for_selected(draw, edited_input)
 
     top = top + 1
 
-    draw:text(grid_rect(col_timeout, top, 2, LABEL_HEIGHT), 'start', Locales.str('SEMANTIC_WORKFLOW_INPUTS_TIMEOUT'))
+    draw:text(grid_rect(col_timeout, top, 2, LABEL_HEIGHT), 'start', Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TIMEOUT)
     local old_timeout = edited_input.timeout
     edited_input.timeout = ugui.numberbox({
         uid = UID.Timeout,
         rectangle = grid_rect(col_timeout, top + LABEL_HEIGHT, 2, Gui.MEDIUM_CONTROL_HEIGHT),
         value = edited_input.timeout,
         places = 4,
-        tooltip = Locales.str('SEMANTIC_WORKFLOW_INPUTS_TIMEOUT_TOOL_TIP'),
+        tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TIMEOUT_TOOL_TIP,
     })
     any_changes = any_changes or old_timeout ~= edited_input.timeout
 
@@ -300,7 +300,7 @@ local function lower_controls(draw, old_values, new_values, top)
         rectangle = grid_rect(2, top, 1.5, Gui.LARGE_CONTROL_HEIGHT),
         places = 2,
         value = math.max(0, math.min(64, new_values.goal_mag)),
-        tooltip = Locales.str('TAS_MAGNITUDE_TOOLTIP'),
+        tooltip = Locales.msg.TAS_MAGNITUDE_TOOLTIP,
     })
     -- a value starting with a 9 likely indicates that the user scrolled down
     -- on the most significant digit while its value was 0, so we "clamp" to 0 here
@@ -311,8 +311,8 @@ local function lower_controls(draw, old_values, new_values, top)
     if ugui.button({
         uid = UID.SpeedKick,
         rectangle = grid_rect(3.5, top, 1.5, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('SEMANTIC_WORKFLOW_CONTROL_SPDKICK'),
-        tooltip = Locales.str('TAS_SPDKICK_TOOLTIP'),
+        text = Locales.msg.SEMANTIC_WORKFLOW_CONTROL_SPDKICK,
+        tooltip = Locales.msg.TAS_SPDKICK_TOOLTIP,
     }) then
         if new_values.goal_mag ~= 48 then
             new_values.goal_mag = 48
@@ -324,8 +324,8 @@ local function lower_controls(draw, old_values, new_values, top)
     if ugui.button({
         uid = UID.ResetMag,
         rectangle = grid_rect(5, top, 1.5, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('MAG_RESET'),
-        tooltip = Locales.str('TAS_MAG_RESET_TOOLTIP'),
+        text = Locales.msg.MAG_RESET,
+        tooltip = Locales.msg.TAS_MAG_RESET_TOOLTIP,
     }) then
         new_values.goal_mag = 64
     end
@@ -371,7 +371,7 @@ local function atan_controls(draw, sheet, new_values, top)
     if ugui.button({
             uid = UID.AtanRetime,
             rectangle = grid_rect(0, top, 2.5, Gui.LARGE_CONTROL_HEIGHT),
-            text = Locales.str(atan_retime_state),
+            text = Locales.msg[atan_retime_state],
             is_enabled = InputListGui.special_select_handler == nil,
         }) then
         InputListGui.special_select_handler = select_atan_start
@@ -399,7 +399,7 @@ local function atan_controls(draw, sheet, new_values, top)
             uid = UID.AtanButtons + index * 2,
             rectangle = grid_rect(x, top + 1.5, width / 2, 0.5),
             text = '-',
-            tooltip = Locales.str(tooltip_key),
+            tooltip = Locales.msg[tooltip_key],
         }) then
             table[field] = math.max(low_bound, table[field] - increment)
         end
@@ -408,7 +408,7 @@ local function atan_controls(draw, sheet, new_values, top)
             uid = UID.AtanButtons + (index * 2 + 1),
             rectangle = grid_rect(x + width / 2, top + 1.5, width / 2, 0.5),
             text = '+',
-            tooltip = Locales.str(tooltip_key),
+            tooltip = Locales.msg[tooltip_key],
         }) then
             table[field] = math.min(high_bound, table[field] + increment)
         end
@@ -425,8 +425,8 @@ local function upper_controls(new_values, top)
     if ugui.toggle_button({
         uid = UID.MovementModeMatchYaw,
         rectangle = grid_rect(0, top, 4, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('SEMANTIC_WORKFLOW_CONTROL_MATCH_YAW'),
-        tooltip = Locales.str('TAS_MATCH_YAW_TOOLTIP'),
+        text = Locales.msg.SEMANTIC_WORKFLOW_CONTROL_MATCH_YAW,
+        tooltip = Locales.msg.TAS_MATCH_YAW_TOOLTIP,
         is_checked = new_values.movement_mode == MovementModes.match_yaw,
     }) then
         new_values.movement_mode = MovementModes.match_yaw
@@ -435,8 +435,8 @@ local function upper_controls(new_values, top)
     if ugui.toggle_button({
         uid = UID.MovementModeReverseYaw,
         rectangle = grid_rect(4, top, 4, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('SEMANTIC_WORKFLOW_CONTROL_REVERSE_YAW'),
-        tooltip = Locales.str('TAS_REVERSE_YAW_TOOLTIP'),
+        text = Locales.msg.SEMANTIC_WORKFLOW_CONTROL_REVERSE_YAW,
+        tooltip = Locales.msg.TAS_REVERSE_YAW_TOOLTIP,
         is_checked = new_values.movement_mode == MovementModes.reverse_yaw,
     }) then
         new_values.movement_mode = MovementModes.reverse_yaw
@@ -448,14 +448,14 @@ local function upper_controls(new_values, top)
         rectangle = grid_rect(6, top + 1, 2, Gui.LARGE_CONTROL_HEIGHT),
         places = 5,
         value = new_values.goal_angle,
-        tooltip = Locales.str('TAS_GOAL_ANGLE_TOOLTIP'),
+        tooltip = Locales.msg.TAS_GOAL_ANGLE_TOOLTIP,
     }))
 
     if ugui.toggle_button({
             uid = UID.MovementModeMatchAngle,
             rectangle = grid_rect(0, top + 1, 3, Gui.LARGE_CONTROL_HEIGHT),
-            text = Locales.str('SEMANTIC_WORKFLOW_CONTROL_MATCH_ANGLE'),
-            tooltip = Locales.str('TAS_MATCH_ANGLE_TOOLTIP'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_CONTROL_MATCH_ANGLE,
+            tooltip = Locales.msg.TAS_MATCH_ANGLE_TOOLTIP,
             is_checked = new_values.movement_mode == MovementModes.match_angle,
         }) then
         new_values.movement_mode = MovementModes.match_angle
@@ -464,8 +464,8 @@ local function upper_controls(new_values, top)
     new_values.dyaw = ugui.toggle_button({
         uid = UID.DYaw,
         rectangle = grid_rect(3, top + 1, 1.5, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('SEMANTIC_WORKFLOW_CONTROL_DYAW'),
-        tooltip = Locales.str('TAS_DYAW_TOOLTIP'),
+        text = Locales.msg.SEMANTIC_WORKFLOW_CONTROL_DYAW,
+        tooltip = Locales.msg.TAS_DYAW_TOOLTIP,
         is_checked = new_values.dyaw,
     })
 
@@ -473,7 +473,7 @@ local function upper_controls(new_values, top)
             uid = UID.StrainLeft,
             rectangle = grid_rect(4.5, top + 1, 0.75, Gui.LARGE_CONTROL_HEIGHT),
             text = '[icon:arrow_left]',
-            tooltip = Locales.str('TAS_STRAIN_LEFT_TOOLTIP'),
+            tooltip = Locales.msg.TAS_STRAIN_LEFT_TOOLTIP,
             is_checked = new_values.strain_left,
         }) then
         new_values.strain_right = false
@@ -486,7 +486,7 @@ local function upper_controls(new_values, top)
             uid = UID.StrainRight,
             rectangle = grid_rect(5.25, top + 1, 0.75, Gui.LARGE_CONTROL_HEIGHT),
             text = '[icon:arrow_right]',
-            tooltip = Locales.str('TAS_STRAIN_RIGHT_TOOLTIP'),
+            tooltip = Locales.msg.TAS_STRAIN_RIGHT_TOOLTIP,
             is_checked = new_values.strain_right,
         }) then
         new_values.strain_left = false
@@ -498,24 +498,24 @@ local function upper_controls(new_values, top)
     new_values.strain_speed_target = ugui.toggle_button({
         uid = UID.StrainSpeedTarget,
         rectangle = grid_rect(0, top + 2, 2, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('D99'),
-        tooltip = Locales.str('TAS_D99_TOOLTIP'),
+        text = Locales.msg.D99,
+        tooltip = Locales.msg.TAS_D99_TOOLTIP,
         is_checked = new_values.strain_speed_target,
     })
 
     new_values.strain_always = ugui.toggle_button({
         uid = UID.StrainAlways,
         rectangle = grid_rect(2, top + 2, 2, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('D99_ALWAYS'),
-        tooltip = Locales.str('TAS_D99_ALWAYS_TOOLTIP'),
+        text = Locales.msg.D99_ALWAYS,
+        tooltip = Locales.msg.TAS_D99_ALWAYS_TOOLTIP,
         is_checked = new_values.strain_always,
     })
 
     local new_atan = ugui.toggle_button({
         uid = UID.Atan,
         rectangle = grid_rect(4, top + 2, 3, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('SEMANTIC_WORKFLOW_CONTROL_ATAN'),
-        tooltip = Locales.str('TAS_ATAN_STRAIN_TOOLTIP'),
+        text = Locales.msg.SEMANTIC_WORKFLOW_CONTROL_ATAN,
+        tooltip = Locales.msg.TAS_ATAN_STRAIN_TOOLTIP,
         is_checked = new_values.atan_strain,
     })
     if new_atan and not new_values.atan_strain then
@@ -526,8 +526,8 @@ local function upper_controls(new_values, top)
     new_values.reverse_arc = ugui.toggle_button({
         uid = UID.AtanReverse,
         rectangle = grid_rect(7, top + 2, 1, Gui.LARGE_CONTROL_HEIGHT),
-        text = Locales.str('SEMANTIC_WORKFLOW_CONTROL_ATAN_REVERSE'),
-        tooltip = Locales.str('TAS_ATAN_STRAIN_REV_TOOLTIP'),
+        text = Locales.msg.SEMANTIC_WORKFLOW_CONTROL_ATAN_REVERSE,
+        tooltip = Locales.msg.TAS_ATAN_STRAIN_REV_TOOLTIP,
         is_checked = new_values.reverse_arc,
     })
 end

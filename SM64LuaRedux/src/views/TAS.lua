@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('TAS', function(enum_next)
@@ -23,6 +23,7 @@ local UID = UIDProvider.allocate_once('TAS', function(enum_next)
         AtanStrainReverse = enum_next(),
         AtanButtons = enum_next(10),
         AtanFieldLabels = enum_next(5),
+        AtanPanel = enum_next(),
         MovementModeDisabled = enum_next(),
         MovementModeMatchYaw = enum_next(),
         MovementModeReverseYaw = enum_next(),
@@ -34,7 +35,7 @@ local UID = UIDProvider.allocate_once('TAS', function(enum_next)
 end)
 
 return {
-    name = function() return Locales.str('TAS_TAB_NAME') end,
+    name = function() return Locales.msg.TAS_TAB_NAME end,
     draw = function()
         local theme = Styles.theme()
         local foreground_color = Drawing.foreground_color()
@@ -55,8 +56,8 @@ return {
         local _, meta = ugui.toggle_button({
             uid = UID.MovementModeMatchYaw,
             rectangle = grid_rect(0, 0, 4, 1),
-            text = Locales.str('MATCH_YAW'),
-            tooltip = Locales.str('TAS_MATCH_YAW_TOOLTIP'),
+            text = Locales.msg.MATCH_YAW,
+            tooltip = Locales.msg.TAS_MATCH_YAW_TOOLTIP,
             is_checked = Settings.tas.movement_mode == MovementModes.match_yaw,
         })
 
@@ -67,8 +68,8 @@ return {
         local _, meta = ugui.toggle_button({
             uid = UID.MovementModeReverseYaw,
             rectangle = grid_rect(4, 0, 4, 1),
-            text = Locales.str('REVERSE_YAW'),
-            tooltip = Locales.str('TAS_REVERSE_YAW_TOOLTIP'),
+            text = Locales.msg.REVERSE_YAW,
+            tooltip = Locales.msg.TAS_REVERSE_YAW_TOOLTIP,
             is_checked = Settings.tas.movement_mode == MovementModes.reverse_yaw,
         })
 
@@ -79,8 +80,8 @@ return {
         local _, meta = ugui.toggle_button({
             uid = UID.MovementModeMatchAngle,
             rectangle = grid_rect(0, 1, 2.5, 1),
-            text = Locales.str('MATCH_ANGLE'),
-            tooltip = Locales.str('TAS_MATCH_ANGLE_TOOLTIP'),
+            text = Locales.msg.MATCH_ANGLE,
+            tooltip = Locales.msg.TAS_MATCH_ANGLE_TOOLTIP,
             is_checked = Settings.tas.movement_mode == MovementModes.match_angle,
         })
 
@@ -92,8 +93,8 @@ return {
             uid = UID.DYaw,
             is_enabled = Settings.tas.movement_mode == MovementModes.match_angle,
             rectangle = grid_rect(2.5, 1, 2, 1),
-            text = Locales.str('DYAW'),
-            tooltip = Locales.str('TAS_DYAW_TOOLTIP'),
+            text = Locales.msg.DYAW,
+            tooltip = Locales.msg.TAS_DYAW_TOOLTIP,
             is_checked = Settings.tas.dyaw,
         })
         if dyaw_meta.signal_change == ugui.signal_change_states.started then
@@ -104,7 +105,7 @@ return {
             uid = UID.StrainLeft,
             rectangle = grid_rect(4.5, 1, 0.75, 1),
             text = '[icon:arrow_left]',
-            tooltip = Locales.str('TAS_STRAIN_LEFT_TOOLTIP'),
+            tooltip = Locales.msg.TAS_STRAIN_LEFT_TOOLTIP,
             is_checked = Settings.tas.strain_left,
         })
         if meta.signal_change == ugui.signal_change_states.started then
@@ -115,7 +116,7 @@ return {
             uid = UID.StrainRight,
             rectangle = grid_rect(5.25, 1, 0.75, 1),
             text = '[icon:arrow_right]',
-            tooltip = Locales.str('TAS_STRAIN_RIGHT_TOOLTIP'),
+            tooltip = Locales.msg.TAS_STRAIN_RIGHT_TOOLTIP,
             is_checked = Settings.tas.strain_right,
         })
         if meta.signal_change == ugui.signal_change_states.started then
@@ -128,14 +129,14 @@ return {
             rectangle = grid_rect(6, 1, 2, 1),
             places = 5,
             value = Settings.tas.goal_angle,
-            tooltip = Locales.str('TAS_GOAL_ANGLE_TOOLTIP'),
+            tooltip = Locales.msg.TAS_GOAL_ANGLE_TOOLTIP,
         }))
 
         local _, meta = ugui.toggle_button({
             uid = UID.D99,
             rectangle = grid_rect(0, 2, 2, 1),
-            text = Locales.str('D99'),
-            tooltip = Locales.str('TAS_D99_TOOLTIP'),
+            text = Locales.msg.D99,
+            tooltip = Locales.msg.TAS_D99_TOOLTIP,
             is_checked = Settings.tas.strain_speed_target,
         })
         if meta.signal_change == ugui.signal_change_states.started then
@@ -146,8 +147,8 @@ return {
             uid = UID.D99Always,
             is_enabled = Settings.tas.strain_speed_target,
             rectangle = grid_rect(2, 2, 2, 1),
-            text = Locales.str('D99_ALWAYS'),
-            tooltip = Locales.str('TAS_D99_ALWAYS_TOOLTIP'),
+            text = Locales.msg.D99_ALWAYS,
+            tooltip = Locales.msg.TAS_D99_ALWAYS_TOOLTIP,
             is_checked = Settings.tas.strain_always,
         })
         if meta.signal_change == ugui.signal_change_states.started then
@@ -157,8 +158,8 @@ return {
         local atan_strain, meta = ugui.toggle_button({
             uid = UID.AtanStrain,
             rectangle = Settings.tas.atan_strain and grid_rect(4, 2, 3, 1) or grid_rect(4, 2, 4, 1),
-            text = Locales.str('ATAN_STRAIN'),
-            tooltip = Locales.str('TAS_ATAN_STRAIN_TOOLTIP'),
+            text = Locales.msg.ATAN_STRAIN,
+            tooltip = Locales.msg.TAS_ATAN_STRAIN_TOOLTIP,
             is_checked = Settings.tas.atan_strain,
         })
         if meta.signal_change == ugui.signal_change_states.started then
@@ -172,121 +173,128 @@ return {
             Settings.tas.reverse_arc = ugui.toggle_button({
                 uid = UID.AtanStrainReverse,
                 rectangle = grid_rect(7, 2, 1, 1),
-                text = Locales.str('ATAN_STRAIN_REV'),
-                tooltip = Locales.str('TAS_ATAN_STRAIN_REV_TOOLTIP'),
+                text = Locales.msg.ATAN_STRAIN_REV,
+                tooltip = Locales.msg.TAS_ATAN_STRAIN_REV_TOOLTIP,
                 is_checked = Settings.tas.reverse_arc,
+                transition = ugui.transition.fly({ x = -5, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
             })
         end
 
         if Settings.tas.atan_strain then
-            local function atan_field(index, text, tooltip_key, up_callback, down_callback)
-                local width = 1.6
-                local x = index * width
-                ugui.label({
-                    uid = UID.AtanFieldLabels + index,
-                    rectangle = grid_rect(x, 3, width, 0.5),
-                    text = text,
-                    color = foreground_color,
-                    font_size = theme.font_size,
-                    font_name = 'Consolas',
-                    align_x = ugui.alignment.center,
-                    align_y = ugui.alignment.center,
-                    fit = true
-                })
+            ugui.panel({
+                uid = UID.AtanPanel,
+                rectangle = grid_rect(0, 3, 8, 1, 0),
+                transition = ugui.transition.fly({ y = -5, duration = Settings.animations == 'fast' and 0.1 or nil })
+            }, function()
+                local function atan_field(index, text, tooltip_key, up_callback, down_callback)
+                    local width = 1.6
+                    local x = index * width
+                    ugui.label({
+                        uid = UID.AtanFieldLabels + index,
+                        rectangle = grid_rect_abs(x, 0, width, 0.5),
+                        text = text,
+                        color = foreground_color,
+                        font_size = theme.font_size,
+                        font_name = 'Consolas',
+                        align_x = ugui.alignment.center,
+                        align_y = ugui.alignment.center,
+                        fit = true
+                    })
 
-                if ugui.button({
-                        uid = UID.AtanButtons + index * 2,
-                        rectangle = grid_rect(x, 3.5, width / 2, 0.5),
-                        text = '-',
-                        tooltip = Locales.str(tooltip_key),
-                    }) then
-                    down_callback()
+                    if ugui.button({
+                            uid = UID.AtanButtons + index * 2,
+                            rectangle = grid_rect_abs(x, 0.5, width / 2, 0.5),
+                            text = '-',
+                            tooltip = Locales.msg[tooltip_key],
+                        }) then
+                        down_callback()
+                    end
+
+                    if ugui.button({
+                            uid = UID.AtanButtons + (index * 2 + 1),
+                            rectangle = grid_rect_abs(x + width / 2, 0.5, width / 2, 0.5),
+                            text = '+',
+                            tooltip = Locales.msg[tooltip_key],
+                        }) then
+                        up_callback()
+                    end
                 end
 
-                if ugui.button({
-                        uid = UID.AtanButtons + (index * 2 + 1),
-                        rectangle = grid_rect(x + width / 2, 3.5, width / 2, 0.5),
-                        text = '+',
-                        tooltip = Locales.str(tooltip_key),
-                    }) then
-                    up_callback()
-                end
-            end
+                atan_field(0,
+                    'E: ' .. tostring(Settings.atan_exp),
+                    'TAS_ATAN_EXP_TOOLTIP',
+                    function()
+                        Settings.atan_exp = math.max(-4, math.min(Settings.atan_exp + 1, 4))
+                    end,
+                    function()
+                        Settings.atan_exp = math.max(-4, math.min(Settings.atan_exp - 1, 4))
+                    end)
 
-            atan_field(0,
-                'E: ' .. tostring(Settings.atan_exp),
-                'TAS_ATAN_EXP_TOOLTIP',
-                function()
-                    Settings.atan_exp = math.max(-4, math.min(Settings.atan_exp + 1, 4))
-                end,
-                function()
-                    Settings.atan_exp = math.max(-4, math.min(Settings.atan_exp - 1, 4))
-                end)
-
-            atan_field(1,
-                string.format('R: %.5g', Settings.tas.atan_readonly_r ~= nil and Settings.tas.atan_readonly_r or Settings.tas.atan_r),
-                'TAS_ATAN_R_TOOLTIP',
-                function()
-                    Settings.tas.atan_r = Settings.tas.atan_r + math.pow(10, Settings.atan_exp)
-                    if Settings.tas.atan_r > 1e5 then
-                        Settings.tas.atan_r = 99999
-                    elseif math.abs(Settings.tas.atan_r) < 1e-4 then
-                        Settings.tas.atan_r = 0
-                    end
-                end,
-                function()
-                    Settings.tas.atan_r = Settings.tas.atan_r - math.pow(10, Settings.atan_exp)
-                    if Settings.tas.atan_r < -1e5 then
-                        Settings.tas.atan_r = -99999
-                    elseif math.abs(Settings.tas.atan_r) < 1e-4 then
-                        Settings.tas.atan_r = 0
-                    end
-                end)
+                atan_field(1,
+                    string.format('R: %.5g', Settings.tas.atan_readonly_r ~= nil and Settings.tas.atan_readonly_r or Settings.tas.atan_r),
+                    'TAS_ATAN_R_TOOLTIP',
+                    function()
+                        Settings.tas.atan_r = Settings.tas.atan_r + math.pow(10, Settings.atan_exp)
+                        if Settings.tas.atan_r > 1e5 then
+                            Settings.tas.atan_r = 99999
+                        elseif math.abs(Settings.tas.atan_r) < 1e-4 then
+                            Settings.tas.atan_r = 0
+                        end
+                    end,
+                    function()
+                        Settings.tas.atan_r = Settings.tas.atan_r - math.pow(10, Settings.atan_exp)
+                        if Settings.tas.atan_r < -1e5 then
+                            Settings.tas.atan_r = -99999
+                        elseif math.abs(Settings.tas.atan_r) < 1e-4 then
+                            Settings.tas.atan_r = 0
+                        end
+                    end)
 
 
-            atan_field(2,
-                string.format('D: %.5g', Settings.tas.atan_d),
-                'TAS_ATAN_D_TOOLTIP',
-                function()
-                    Settings.tas.atan_d = Settings.tas.atan_d + math.pow(10, Settings.atan_exp)
-                    if Settings.tas.atan_d >= 1e5 then
-                        Settings.tas.atan_d = 99999
-                    elseif math.abs(Settings.tas.atan_d) < 1e-4 then
-                        Settings.tas.atan_d = 0
-                    end
-                end,
-                function()
-                    Settings.tas.atan_d = Settings.tas.atan_d - math.pow(10, Settings.atan_exp)
-                    if Settings.tas.atan_d <= -1e5 then
-                        Settings.tas.atan_d = -99999
-                    elseif math.abs(Settings.tas.atan_d) < 1e-4 then
-                        Settings.tas.atan_d = 0
-                    end
-                end)
+                atan_field(2,
+                    string.format('D: %.5g', Settings.tas.atan_d),
+                    'TAS_ATAN_D_TOOLTIP',
+                    function()
+                        Settings.tas.atan_d = Settings.tas.atan_d + math.pow(10, Settings.atan_exp)
+                        if Settings.tas.atan_d >= 1e5 then
+                            Settings.tas.atan_d = 99999
+                        elseif math.abs(Settings.tas.atan_d) < 1e-4 then
+                            Settings.tas.atan_d = 0
+                        end
+                    end,
+                    function()
+                        Settings.tas.atan_d = Settings.tas.atan_d - math.pow(10, Settings.atan_exp)
+                        if Settings.tas.atan_d <= -1e5 then
+                            Settings.tas.atan_d = -99999
+                        elseif math.abs(Settings.tas.atan_d) < 1e-4 then
+                            Settings.tas.atan_d = 0
+                        end
+                    end)
 
-            atan_field(3,
-                'N: ' .. tostring(Settings.tas.atan_n),
-                'TAS_ATAN_N_TOOLTIP',
-                function() -- minimum change of 0.25
-                    Settings.tas.atan_n = math.max(0,
-                        Settings.tas.atan_n + math.pow(10, math.max(-0.6020599913279624, Settings.atan_exp)), 2)
-                end,
-                function()
-                    Settings.tas.atan_n = math.max(0,
-                        Settings.tas.atan_n - math.pow(10, math.max(-0.6020599913279624, Settings.atan_exp)), 2)
-                end)
+                atan_field(3,
+                    'N: ' .. tostring(Settings.tas.atan_n),
+                    'TAS_ATAN_N_TOOLTIP',
+                    function() -- minimum change of 0.25
+                        Settings.tas.atan_n = math.max(0,
+                            Settings.tas.atan_n + math.pow(10, math.max(-0.6020599913279624, Settings.atan_exp)), 2)
+                    end,
+                    function()
+                        Settings.tas.atan_n = math.max(0,
+                            Settings.tas.atan_n - math.pow(10, math.max(-0.6020599913279624, Settings.atan_exp)), 2)
+                    end)
 
-            atan_field(4,
-                'S: ' .. tostring(Settings.tas.atan_start),
-                'TAS_ATAN_S_TOOLTIP',
-                function() -- minimum change of 1
-                    Settings.tas.atan_start = math.max(0,
-                        Settings.tas.atan_start + math.pow(10, math.max(0, Settings.atan_exp)))
-                end,
-                function()
-                    Settings.tas.atan_start = math.max(0,
-                        Settings.tas.atan_start - math.pow(10, math.max(0, Settings.atan_exp)))
-                end)
+                atan_field(4,
+                    'S: ' .. tostring(Settings.tas.atan_start),
+                    'TAS_ATAN_S_TOOLTIP',
+                    function() -- minimum change of 1
+                        Settings.tas.atan_start = math.max(0,
+                            Settings.tas.atan_start + math.pow(10, math.max(0, Settings.atan_exp)))
+                    end,
+                    function()
+                        Settings.tas.atan_start = math.max(0,
+                            Settings.tas.atan_start - math.pow(10, math.max(0, Settings.atan_exp)))
+                    end)
+            end)
         end
 
         -- Shift elements down to make place for atan panel if atan strain is enabled.
@@ -330,14 +338,14 @@ return {
             rectangle = grid_rect(4, YORG + 2, 1.5, 1),
             places = 2,
             value = Settings.tas.goal_mag,
-            tooltip = Locales.str('TAS_MAGNITUDE_TOOLTIP'),
+            tooltip = Locales.msg.TAS_MAGNITUDE_TOOLTIP,
         }))
 
         if ugui.button({
                 uid = UID.ResetMag,
                 rectangle = grid_rect(4, YORG + 3, 1.5, 1),
-                text = Locales.str('MAG_RESET'),
-                tooltip = Locales.str('TAS_MAG_RESET_TOOLTIP'),
+                text = Locales.msg.MAG_RESET,
+                tooltip = Locales.msg.TAS_MAG_RESET_TOOLTIP,
                 styler_mixin = {
                     font_size = theme.font_size * 0.9,
                 },
@@ -348,9 +356,9 @@ return {
         if ugui.button({
                 uid = UID.DustlessWalk,
                 rectangle = grid_rect(5.5, YORG + 3, 2.5, 1),
-                text = Locales.str('DUSTLESS_WALK'),
+                text = Locales.msg.DUSTLESS_WALK,
                 is_checked = Settings.tas.dustless_walk,
-                tooltip = Locales.str('TAS_DUSTLESS_WALK_TOOLTIP'),
+                tooltip = Locales.msg.TAS_DUSTLESS_WALK_TOOLTIP,
             }) then
             action.invoke(ACTION_SET_DUSTLESS_WALK)
         end
@@ -358,9 +366,9 @@ return {
         if ugui.button({
                 uid = UID.SpeedKick,
                 rectangle = grid_rect(5.5, YORG + 2, 2.5, 1),
-                text = Locales.str('SPDKICK'),
+                text = Locales.msg.SPDKICK,
                 is_checked = Settings.tas.maximize_airspeed,
-                tooltip = Locales.str('TAS_SPDKICK_TOOLTIP'),
+                tooltip = Locales.msg.TAS_SPDKICK_TOOLTIP,
             }) then
             action.invoke(ACTION_SET_SPDKICK)
         end

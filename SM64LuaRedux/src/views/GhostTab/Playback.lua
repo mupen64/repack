@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('GhostPlayback', function(enum_next)
@@ -62,7 +62,7 @@ local color_text_ghost = nil
 local Colors = dofile(views_path .. 'GhostTab/Colors.lua')
 
 return {
-    name = function() return Locales.str('GHOST_PLAYBACK_TAB_NAME') end,
+    name = function() return Locales.msg.GHOST_PLAYBACK_TAB_NAME end,
 
     ---@return string[] # the varwatch lines of the selected ghost (Mario if none), for the overlay
     varwatch_items = function() return GhostVarWatch.get_data(selected_ghost) end,
@@ -95,7 +95,7 @@ return {
             ugui.label({
                 uid = UID.Warning,
                 rectangle = grid_rect(0.1, 1, 7.8, 5),
-                text = Locales.str('GHOST_PLAYBACK_WARNING'),
+                text = Locales.msg.GHOST_PLAYBACK_WARNING,
                 color = foreground_color,
                 font_size = theme.font_size * 1.25,
                 font_name = theme.font_name,
@@ -106,7 +106,7 @@ return {
             if ugui.button({
                     uid = UID.AcceptWarning,
                     rectangle = grid_rect(2, 8.5, 4, 1),
-                    text = Locales.str('GHOST_PLAYBACK_WARNING_ACCEPT'),
+                    text = Locales.msg.GHOST_PLAYBACK_WARNING_ACCEPT,
                 }) then
                 Settings.ghost_playback_warning_accepted = true
             end
@@ -117,13 +117,13 @@ return {
         local hack_enabled, hack_controlled = Ghosts.hack_is_applied()
         local valid_ghost_selected = selected_ghost ~= nil
 
-        local status = Locales.str('GHOST_STATUS')
+        local status = Locales.msg.GHOST_STATUS
         if not hack_supported then
-            status = status .. Locales.str('GHOST_UNSUPPORTED')
+            status = status .. Locales.msg.GHOST_UNSUPPORTED
         elseif hack_enabled then
-            status = status .. Locales.str(hack_controlled and 'GHOST_ENABLED' or 'GHOST_NOT_CONTROLLED')
+            status = status .. Locales.msg[hack_controlled and 'GHOST_ENABLED' or 'GHOST_NOT_CONTROLLED']
         else
-            status = status .. Locales.str('GHOST_DISABLED')
+            status = status .. Locales.msg.GHOST_DISABLED
         end
         section_label(UID.PlaybackStatus, grid_rect(0, 0.9, 8, 1), status)
 
@@ -133,8 +133,8 @@ return {
         local auto_apply_hack = ugui.toggle_button({
             uid = UID.EnableHack,
             rectangle = grid_rect(0.1, 1.7, 7.8, 1),
-            text = Locales.str(take_control and 'GHOST_TAKE_CONTROL' or 'GHOST_ENABLE_HACK'),
-            tooltip = Locales.str(take_control and 'GHOST_TAKE_CONTROL_TOOLTIP' or tooltip),
+            text = Locales.msg[take_control and 'GHOST_TAKE_CONTROL' or 'GHOST_ENABLE_HACK'],
+            tooltip = Locales.msg[take_control and 'GHOST_TAKE_CONTROL_TOOLTIP' or tooltip],
             is_checked = is_checked,
             is_enabled = hack_supported
         })
@@ -146,13 +146,13 @@ return {
         if ugui.button({
                 uid = UID.AddGhost,
                 rectangle = grid_rect(0.1, 2.7, 2.6, 1),
-                text = Locales.str('GHOST_ADD'),
+                text = Locales.msg.GHOST_ADD,
             }) then
             local path = iohelper.filediag("*.ghost", 0)
             if string.len(path) > 0 then
                 local new_ghost = Ghosts.load_ghost_file(path)
                 if not new_ghost then
-                    print(Locales.str('GHOST_LOAD_FAILED'))
+                    print(Locales.msg.GHOST_LOAD_FAILED)
                 else
                     selected_ghost = new_ghost
                 end
@@ -162,7 +162,7 @@ return {
         if ugui.button({
                 uid = UID.RemoveGhost,
                 rectangle = grid_rect(2.7, 2.7, 2.6, 1),
-                text = Locales.str('GHOST_REMOVE'),
+                text = Locales.msg.GHOST_REMOVE,
                 is_enabled = valid_ghost_selected
             }) and selected_ghost then
             Ghosts.unload_ghost(selected_ghost)
@@ -175,15 +175,15 @@ return {
         if ugui.button({
             uid = UID.EnableGhost,
             rectangle = grid_rect(5.3, 2.7, 2.6, 1),
-            text = was_enabled and Locales.str('GHOST_DISABLE_GHOST') or Locales.str('GHOST_ENABLE_GHOST'),
-            tooltip = Locales.str('GHOST_ENABLE_GHOST_TOOLTIP'),
+            text = was_enabled and Locales.msg.GHOST_DISABLE_GHOST or Locales.msg.GHOST_ENABLE_GHOST,
+            tooltip = Locales.msg.GHOST_ENABLE_GHOST_TOOLTIP,
             is_enabled = valid_ghost_selected
         }) then
             selected_ghost.enabled = not was_enabled
         end
 
         -- file of the selected ghost
-        section_label(UID.FileLabel, grid_rect(0, 7.1, 1, 0.9), Locales.str('GHOST_FILE'))
+        section_label(UID.FileLabel, grid_rect(0, 7.1, 1, 0.9), Locales.msg.GHOST_FILE)
 
         local name = 'Mario'
         if selected_ghost then
@@ -193,7 +193,7 @@ return {
             uid = UID.FileName,
             rectangle = grid_rect(1.5, 7.15, 4.5, 0.8),
             text = name,
-            tooltip = Locales.str('GHOST_NAME_TOOLTIP'),
+            tooltip = Locales.msg.GHOST_NAME_TOOLTIP,
             styler_mixin = {
                 font_size = theme.font_size * 1.25,
             },
@@ -206,18 +206,18 @@ return {
         if ugui.button({
                 uid = UID.SaveGhost,
                 rectangle = grid_rect(6, 7.15, 1.9, 0.75),
-                text = Locales.str('GHOST_SAVE_AS'),
-                tooltip = Locales.str('GHOST_SAVE_AS_TOOLTIP'),
+                text = Locales.msg.GHOST_SAVE_AS,
+                tooltip = Locales.msg.GHOST_SAVE_AS_TOOLTIP,
                 is_enabled = valid_ghost_selected
             }) and selected_ghost then
             local path = iohelper.filediag("*.ghost", 1)
             if string.len(path) > 0 and not Ghosts.save_ghost_file(selected_ghost, path) then
-                print(Locales.str('GHOST_SAVE_FAILED'))
+                print(Locales.msg.GHOST_SAVE_FAILED)
             end
         end
 
         -- editable ghost data
-        section_label(UID.TimerStartLabel, grid_rect(0, 7.9, 8, 1), Locales.str('GHOST_TIMER_START'))
+        section_label(UID.TimerStartLabel, grid_rect(0, 7.9, 8, 1), Locales.msg.GHOST_TIMER_START)
 
         local current_start = 0
         if selected_ghost ~= nil then
@@ -227,7 +227,7 @@ return {
             uid = UID.TimerStart,
             rectangle = grid_rect(3.7, 8, 2.6, 0.8),
             text = current_start .. '',
-            tooltip = Locales.str('GHOST_TIMER_START_TOOLTIP'),
+            tooltip = Locales.msg.GHOST_TIMER_START_TOOLTIP,
             styler_mixin = {
                 font_size = theme.font_size * 1.25,
             },
@@ -243,7 +243,7 @@ return {
                 uid = UID.TimerStartDecrement,
                 rectangle = grid_rect(6.3, 8, 0.8, 0.8),
                 text = '-',
-                tooltip = Locales.str('GHOST_TIMER_START_DECREMENT_TOOLTIP'),
+                tooltip = Locales.msg.GHOST_TIMER_START_DECREMENT_TOOLTIP,
                 is_enabled = valid_ghost_selected,
                 styler_mixin = {
                     font_size = theme.font_size * 1.25,
@@ -256,7 +256,7 @@ return {
                 uid = UID.TimerStartIncrement,
                 rectangle = grid_rect(7.1, 8, 0.8, 0.8),
                 text = '+',
-                tooltip = Locales.str('GHOST_TIMER_START_INCREMENT_TOOLTIP'),
+                tooltip = Locales.msg.GHOST_TIMER_START_INCREMENT_TOOLTIP,
                 is_enabled = valid_ghost_selected,
                 styler_mixin = {
                     font_size = theme.font_size * 1.25,
@@ -272,10 +272,10 @@ return {
 
         -- display object's graphics instead of hat options
         if selected_ghost ~= nil and selected_ghost.graphics ~= 0 then
-            section_label(UID.GraphicsLabel, grid_rect(0, 8.8, 2.5, 1), Locales.str('GHOST_GRAPHICS'))
+            section_label(UID.GraphicsLabel, grid_rect(0, 8.8, 2.5, 1), Locales.msg.GHOST_GRAPHICS)
             section_label(UID.Graphics, grid_rect(2, 8.8, 5.4, 1), string.format('0x%X', selected_ghost.graphics))
         else
-            section_label(UID.TransparentLabel, grid_rect(0, 8.8, 2.5, 1), Locales.str('GHOST_TRANSPARENT'))
+            section_label(UID.TransparentLabel, grid_rect(0, 8.8, 2.5, 1), Locales.msg.GHOST_TRANSPARENT)
 
             local transparent = false
             if selected_ghost ~= nil then
@@ -285,7 +285,7 @@ return {
                     uid = UID.Transparent,
                     rectangle = grid_rect(2.5, 8.9, 0.8, 0.8),
                     text = transparent and '✓' or '',
-                    tooltip = Locales.str('GHOST_TRANSPARENT_TOOLTIP'),
+                    tooltip = Locales.msg.GHOST_TRANSPARENT_TOOLTIP,
                     is_enabled = valid_ghost_selected,
                     styler_mixin = {
                         font_size = theme.font_size * 1.25,
@@ -294,7 +294,7 @@ return {
                 selected_ghost.is_transparent = not transparent
             end
 
-            section_label(UID.ColorLabel, grid_rect(0, 9.7, 1.3, 1), Locales.str('GHOST_COLOR'))
+            section_label(UID.ColorLabel, grid_rect(0, 9.7, 1.3, 1), Locales.msg.GHOST_COLOR)
 
             local color = Ghosts.get_color(selected_ghost)
             local color_text_is_focused = ugui.internal.keyboard_captured_control == UID.Color
@@ -306,7 +306,7 @@ return {
                 uid = UID.Color,
                 rectangle = grid_rect(1.3, 9.8, 2, 0.8),
                 text = color_text,
-                tooltip = Locales.str('GHOST_COLOR_TOOLTIP'),
+                tooltip = Locales.msg.GHOST_COLOR_TOOLTIP,
                 styler_mixin = {
                     font_size = theme.font_size * 1.25,
                 },
@@ -322,7 +322,7 @@ return {
                 uid = UID.ColorPickerButton,
                 rectangle = swatch_rect,
                 text = '',
-                tooltip = Locales.str('GHOST_COLOR_PICKER_TOOLTIP'),
+                tooltip = Locales.msg.GHOST_COLOR_PICKER_TOOLTIP,
             })
             -- the panel isn't hittestable, so clicks still reach the button underneath
             ugui.panel({
@@ -362,8 +362,8 @@ return {
                 if ugui.button({
                         uid = UID.ColorPickerOk,
                         rectangle = grid_rect(0.1, 10.9, 2.1, 0.8),
-                        text = Locales.str('GHOST_COLOR_PICKER_OK'),
-                        tooltip = Locales.str('GHOST_COLOR_PICKER_OK_TOOLTIP'),
+                        text = Locales.msg.GHOST_COLOR_PICKER_OK,
+                        tooltip = Locales.msg.GHOST_COLOR_PICKER_OK_TOOLTIP,
                     }) then
                     picker_open = false
                 end
@@ -371,8 +371,8 @@ return {
                 if ugui.button({
                         uid = UID.ColorPickerCancel,
                         rectangle = grid_rect(2.2, 10.9, 2.1, 0.8),
-                        text = Locales.str('GHOST_COLOR_PICKER_CANCEL'),
-                        tooltip = Locales.str('GHOST_COLOR_PICKER_CANCEL_TOOLTIP'),
+                        text = Locales.msg.GHOST_COLOR_PICKER_CANCEL,
+                        tooltip = Locales.msg.GHOST_COLOR_PICKER_CANCEL_TOOLTIP,
                     }) then
                     Ghosts.set_color(picker_ghost, picker_original)
                     picker_open = false

@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local function get_mario_data()
@@ -20,7 +20,7 @@ local function get_mario_data()
 end
 
 local function entry(label_id, value)
-    return string.format('%s: %s', Locales.str(label_id), value)
+    return string.format('%s: %s', Locales.msg[label_id], value)
 end
 
 ---Formats a frame of ghost or object data as varwatch lines.
@@ -46,7 +46,7 @@ local function frame_varwatch_data(data, extra)
 end
 
 local function format_action(action)
-    return Locales.raw().ACTIONS[action] or (Locales.str('VARWATCH_UNKNOWN_ACTION') .. action)
+    return Locales.raw().ACTIONS[action] or (Locales.msg.VARWATCH_UNKNOWN_ACTION .. action)
 end
 
 ---@class GhostVarWatchData
@@ -154,7 +154,7 @@ local function ghost_varwatch_data(ghost)
         -- display all information for Mario
         for _, variable in ipairs(GHOST_RECORDABLE_VARIABLES) do
             lines[#lines + 1] = entry(variable.locale, variable.format(variable.read()))
-        end 
+        end
         return frame_varwatch_data(get_mario_data(), lines)
     end
     local data = Ghosts.get_ghost_data(ghost, Memory.current.global_timer)

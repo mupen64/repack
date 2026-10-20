@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('Timer', function(enum_next)
@@ -31,7 +31,7 @@ local UID = UIDProvider.allocate_once('Timer', function(enum_next)
 end)
 
 return {
-    name = function() return Locales.str('TIMER_TAB_NAME') end,
+    name = function() return Locales.msg.TIMER_TAB_NAME end,
     draw = function()
         local theme = Styles.theme()
 
@@ -39,8 +39,8 @@ return {
                 uid = UID.Start,
 
                 rectangle = grid_rect(0, 0, 2, 1),
-                text = Locales.str('TIMER_START'),
-                tooltip = Locales.str('TIMER_START_TOOLTIP'),
+                text = Locales.msg.TIMER_START,
+                tooltip = Locales.msg.TIMER_START_TOOLTIP,
             }) then
             Timer.start()
         end
@@ -48,8 +48,8 @@ return {
                 uid = UID.Stop,
 
                 rectangle = grid_rect(2, 0, 2, 1),
-                text = Locales.str('TIMER_STOP'),
-                tooltip = Locales.str('TIMER_STOP_TOOLTIP'),
+                text = Locales.msg.TIMER_STOP,
+                tooltip = Locales.msg.TIMER_STOP_TOOLTIP,
             }) then
             Timer.stop()
         end
@@ -57,16 +57,16 @@ return {
                 uid = UID.Reset,
 
                 rectangle = grid_rect(4, 0, 2, 1),
-                text = Locales.str('TIMER_RESET'),
-                tooltip = Locales.str('TIMER_RESET_TOOLTIP'),
+                text = Locales.msg.TIMER_RESET,
+                tooltip = Locales.msg.TIMER_RESET_TOOLTIP,
             }) then
             Timer.reset()
         end
         Settings.timer_auto = ugui.toggle_button({
             uid = UID.ToggleAuto,
             rectangle = grid_rect(6, 0, 2, 1),
-            text = Settings.timer_auto and Locales.str('TIMER_AUTO') or Locales.str('TIMER_MANUAL'),
-            tooltip = Locales.str('TIMER_MODE_TOOLTIP'),
+            text = Settings.timer_auto and Locales.msg.TIMER_AUTO or Locales.msg.TIMER_MANUAL,
+            tooltip = Locales.msg.TIMER_MODE_TOOLTIP,
             is_checked = Settings.timer_auto,
         })
         ugui.joystick({

@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 Locales = {}
@@ -60,6 +60,9 @@ Locales = {}
 ---@field public SWIM string
 ---@field public YES string
 ---@field public NO string
+---@field public SEMANTIC_WORKFLOW_PROJECT_TAB_NAME string
+---@field public SEMANTIC_WORKFLOW_INPUTS_TAB_NAME string
+---@field public SEMANTIC_WORKFLOW_PREFERENCES_TAB_NAME string
 ---@field public SEMANTIC_WORKFLOW_HELP_HEADER_TITLE string
 ---@field public SEMANTIC_WORKFLOW_HELP_SHOW_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_HELP_EXIT_TOOL_TIP string
@@ -83,6 +86,10 @@ Locales = {}
 ---@field public SEMANTIC_WORKFLOW_CONTROL_SPDKICK string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_FILE_VERSION string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_NO_SHEETS_AVAILABLE string
+---@field public SEMANTIC_WORKFLOW_DUPLICATE_SHEET string
+---@field public SEMANTIC_WORKFLOW_PROJECT_BASE_SHEET_TOOL_TIP string
+---@field public SEMANTIC_WORKFLOW_PROJECT_NO_BASE_SHEET_TOOL_TIP string
+---@field public SEMANTIC_WORKFLOW_PROJECT_SET_BASE_SHEET_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_NEW string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_NEW_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_OPEN string
@@ -114,6 +121,8 @@ Locales = {}
 ---@field public SEMANTIC_WORKFLOW_INPUTS_PREPEND_INPUT_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_APPEND_INPUT_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_DELETE_INPUT_TOOL_TIP string
+---@field public SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_1 string
+---@field public SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_2 string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_TIMEOUT string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_TIMEOUT_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_END_ACTION string
@@ -130,11 +139,21 @@ Locales = {}
 ---@field public SETTINGS_INTERACTION_TAB_NAME string
 ---@field public SETTINGS_VARWATCH_TAB_NAME string
 ---@field public SETTINGS_MEMORY_TAB_NAME string
+---@field public SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT string
+---@field public SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE string
 ---@field public SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT_TOOLTIP string
 ---@field public SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE_TOOLTIP string
 ---@field public SETTINGS_VISUALS_STYLE string
+---@field public SETTINGS_VISUALS_LIGHT_STYLE string
+---@field public SETTINGS_VISUALS_DARK_STYLE string
 ---@field public SETTINGS_VISUALS_LOCALE string
+---@field public SETTINGS_VISUALS_ANIMATIONS string
+---@field public SETTINGS_VISUALS_ANIMATIONS_SYSTEM string
+---@field public SETTINGS_VISUALS_ANIMATIONS_ENABLED string
+---@field public SETTINGS_VISUALS_ANIMATIONS_FAST string
+---@field public SETTINGS_VISUALS_ANIMATIONS_DISABLED string
 ---@field public SETTINGS_VISUALS_NOTIFICATIONS string
+---@field public SETTINGS_VISUALS_NOTIFICATIONS_TOOLTIP string
 ---@field public SETTINGS_VISUALS_NOTIFICATIONS_BUBBLE string
 ---@field public SETTINGS_VISUALS_NOTIFICATIONS_CONSOLE string
 ---@field public SETTINGS_VISUALS_FF_FPS string
@@ -144,10 +163,17 @@ Locales = {}
 ---@field public SETTINGS_VARWATCH_DISABLED string
 ---@field public SETTINGS_VARWATCH_HIDE string
 ---@field public SETTINGS_VARWATCH_ANGLE_FORMAT string
+---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_TOOLTIP string
 ---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_SHORT string
 ---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_DEGREE string
+---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_HAU string
 ---@field public SETTINGS_VARWATCH_DECIMAL_POINTS string
+---@field public SETTINGS_VARWATCH_DECIMAL_POINTS_TOOLTIP string
 ---@field public SETTINGS_MEMORY_FILE_SELECT string
+---@field public SETTINGS_MEMORY_FILE_SELECT_TOOLTIP string
+---@field public SETTINGS_MEMORY_REGION_TOOLTIP string
+---@field public SETTINGS_MEMORY_DETECT_ON_START string
+---@field public SETTINGS_MEMORY_DETECT_ON_START_TOOLTIP string
 ---@field public SETTINGS_MEMORY_DETECT_NOW string
 ---@field public SETTINGS_MEMORY_REGION string
 ---@field public SETTINGS_MEMORY_DETECT_NOW_TOOLTIP string
@@ -324,14 +350,13 @@ Locales.names = function()
     return lualinq.select_key(locales, 'name')
 end
 
----Gets a string from the current locale.
----@param id string # The identifier of the string to query.
----@return string # The localized string, or the identifier if not found.
----@nodiscard
-Locales.str = function(id)
-    local val = locales[Settings.locale_index][id]
-    return val or id
-end
+---@type Locale
+Locales.msg = setmetatable({}, {
+    __index = function(_, id)
+        return locales[Settings.locale_index][id] or id
+    end,
+})
+
 
 ---Gets the raw locale table for the current locale.
 ---@return Locale

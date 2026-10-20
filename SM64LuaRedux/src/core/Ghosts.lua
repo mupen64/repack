@@ -1,7 +1,7 @@
 --
 -- Copyright (c) 2026, Mupen64 maintainers.
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 GhostRecordingModes = {
@@ -384,8 +384,8 @@ function Ghosts.hack_is_supported()
         address_source.vanilla_bank_04_offset ~= nil and
         address_source.s_segment_table_offset ~= nil and
         address_source.area_update_objects ~= nil and
-        (rom_name == Locales.str('ADDRESS_USA') or
-            rom_name == Locales.str('ADDRESS_JAPAN'))
+        (rom_name == Locales.msg.ADDRESS_USA or
+            rom_name == Locales.msg.ADDRESS_JAPAN)
     )
 end
 
@@ -949,7 +949,7 @@ end
 function Ghosts.apply_hack()
 	local rom_name = Addresses[Settings.address_source_index].name()
 	local HACKS, BODY_HOOKS = HACKS_US, BODY_HOOKS_US -- default to US hack
-	if rom_name == Locales.str('ADDRESS_JAPAN') then
+	if rom_name == Locales.msg.ADDRESS_JAPAN then
 		HACKS, BODY_HOOKS = HACKS_JP, BODY_HOOKS_JP
 	end
 

@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('Visualizer', function(enum_next)
@@ -27,7 +27,7 @@ local SEPARATOR_ALPHA <const> = 0.1
 local MIN_FONT_FACTOR <const> = 0.5
 
 return {
-    name = function() return Locales.str('VISUALIZER_TAB_NAME') end,
+    name = function() return Locales.msg.VISUALIZER_TAB_NAME end,
     draw = function()
         local text_color = Drawing.foreground_color()
         local background_color = Styles.theme().background_color

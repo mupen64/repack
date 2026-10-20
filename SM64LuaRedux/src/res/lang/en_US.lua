@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@type Locale
@@ -163,7 +163,14 @@ This action cannot be undone.
     SETTINGS_VARWATCH_TAB_NAME = 'Varwatch',
     SETTINGS_MEMORY_TAB_NAME = 'Memory',
     SETTINGS_VISUALS_STYLE = 'Style',
+    SETTINGS_VISUALS_LIGHT_STYLE = 'Light Style',
+    SETTINGS_VISUALS_DARK_STYLE = 'Dark Style',
     SETTINGS_VISUALS_LOCALE = 'Locale',
+    SETTINGS_VISUALS_ANIMATIONS = 'Animations',
+    SETTINGS_VISUALS_ANIMATIONS_SYSTEM = 'System',
+    SETTINGS_VISUALS_ANIMATIONS_ENABLED = 'Enabled',
+    SETTINGS_VISUALS_ANIMATIONS_FAST = 'Fast',
+    SETTINGS_VISUALS_ANIMATIONS_DISABLED = 'Disabled',
     SETTINGS_VISUALS_NOTIFICATIONS = 'Notifications',
     SETTINGS_VISUALS_NOTIFICATIONS_BUBBLE = 'Bubble',
     SETTINGS_VISUALS_NOTIFICATIONS_CONSOLE = 'Console',
@@ -183,9 +190,10 @@ This action cannot be undone.
     SETTINGS_VARWATCH_ANGLE_FORMAT = 'Angle formatting',
     SETTINGS_VARWATCH_ANGLE_FORMAT_SHORT = 'Short',
     SETTINGS_VARWATCH_ANGLE_FORMAT_DEGREE = 'Degree',
+    SETTINGS_VARWATCH_ANGLE_FORMAT_HAU = 'HAU',
     SETTINGS_VARWATCH_DECIMAL_POINTS = 'Decimal points',
     SETTINGS_VARWATCH_ANGLE_FORMAT_TOOLTIP =
-    'The formatting style for angle variables.\n    Short: Formats angles like signed shorts (0-65535)\n    Degree: Formats angles in degrees (0-360)',
+    'The formatting style for angle variables.\n    Short: Formats angles like signed shorts (0-65535)\n    Degree: Formats angles in degrees (0-360)\n    HAU: Short value divided by 16',
     SETTINGS_VARWATCH_DECIMAL_POINTS_TOOLTIP = 'The maximum number of decimal places displayed in numbers.',
     SETTINGS_VARWATCH_SPD_EFFICIENCY = 'Speed Efficiency Visualization',
     SETTINGS_VARWATCH_SPD_EFFICIENCY_PERCENTAGE = 'Percentage',

@@ -18,6 +18,7 @@ local ugui = {
     _DESCRIPTION = 'Flexible immediate-mode GUI library for Mupen Lua',
     _LICENSE = 'GPL-3',
     DEBUG = false,
+    PREFERS_REDUCED_MOTION = false,
 }
 
 -- ------------------------------------------------------------
@@ -45,6 +46,7 @@ local ugui = {
 ---@field public key_events KeyEventArgs[] The key events that happened since the last frame.
 ---@field public mouse_events MouseEventArgs[] The mouse events that happened since the last frame.
 ---@field public scale number? The global GUI scale. Defaults to 1.
+---@field public time number? Monotonic elapsed time in seconds for transitions. Defaults to `os.clock()`.
 ---@field public window_size { x: number, y: number }? The rendering bounds in device pixels. If nil, no rendering bounds are considered and certain controls, such as menus, might overflow off-screen.
 ---@field public shift boolean? Whether the shift key is being held down during this frame.
 
@@ -113,6 +115,16 @@ ugui.alignment = {
     stretch = 4,
 }
 
+---@enum UguiOverflow
+--- The overflow behavior for child controls.
+ugui.overflow = {
+    --- Child controls are not clipped and can overflow outside the parent bounds.
+    visible = 1,
+    --- Child controls are clipped to the parent's bounds.
+    clip = 2,
+    --- Child controls are clipped to the parent's bounds and scrollbars are shown when content overflows.
+    scroll = 3,
+}
 
 ---Gets the basic visual state of a control.
 ---@param control UguiControl The control.
@@ -153,10 +165,17 @@ ugui.begin_frame = function(environment)
         error('The GUI scale must be a finite number greater than zero.')
     end
 
+    local frame_start_time = os.clock()
+    local transition_time = environment.time or frame_start_time
+    if type(transition_time) ~= 'number' or transition_time ~= transition_time or math.abs(transition_time) == math.huge then
+        error('The transition time must be a finite number.')
+    end
+
     ugui.internal.frame_in_progress = true
     ugui.internal.frame_index = ugui.internal.frame_index + 1
     ugui.internal.context_menu_owner_seen = false
-    ugui.internal.frame_start_time = os.clock()
+    ugui.internal.frame_start_time = frame_start_time
+    ugui.internal.transition_time = transition_time
     if ugui.DEBUG then
         ugui.internal.control_execution_times = {}
         ugui.internal.control_draw_times = {}
@@ -251,6 +270,8 @@ ugui.end_frame = function()
     if ugui.DEBUG then
         ugui.internal.add_debug_overlay_controls()
     end
+
+    ugui.internal.finish_transitions()
 
     -- 1. Input processing pass
     local section_start = ugui.DEBUG and os.clock()
@@ -422,8 +443,13 @@ ugui.end_frame = function()
     end
 
     ---@param node SceneNode
-    local function draw_scene_node(node)
+    local function draw_scene_node(node, transition_opacity)
+        transition_opacity = transition_opacity or 1
         local control = node.control
+        local sx, sy = control.sx or 1, control.sy or 1
+        if sx == 0 or sy == 0 then
+            return
+        end
         local revert_styler_mixin
 
         revert_styler_mixin = ugui.internal.apply_styler_mixin(control)
@@ -431,12 +457,23 @@ ugui.end_frame = function()
         local draw_start = ugui.DEBUG and os.clock()
 
         current_painter:save()
-        current_painter:set_alpha(control.opacity or 1)
-        draw_control_background(control)
-        if control.draw then
-            control.draw(control)
+        local rect = assert(control._render_rect)
+        local cx = rect.x + (control.cx or rect.width / 2)
+        local cy = rect.y + (control.cy or rect.height / 2)
+        current_painter:translate((control._t_tx or control.tx or 0) + cx, (control._t_ty or control.ty or 0) + cy)
+        current_painter:scale(sx, sy)
+        current_painter:translate(-cx, -cy)
+
+        current_painter:save()
+        local opacity = ugui.internal.clamp(control._t_opacity or control.opacity or 1, 0, 1)
+        current_painter:set_alpha(opacity * transition_opacity)
+        if not node.transition_shell then
+            draw_control_background(control)
+            if control.draw then
+                control.draw(control)
+            end
+            draw_control_stroke(control)
         end
-        draw_control_stroke(control)
         current_painter:restore()
 
         if draw_start then
@@ -444,20 +481,22 @@ ugui.end_frame = function()
             ugui.internal.draw_debug_control_state(control)
         end
 
-        if control.clip_children then
-            current_painter:save()
-            current_painter:clip(ugui.internal.rect_to_painter_rect(control._render_rect))
-        end
-
         local children = ugui.internal.get_sorted_scene_children(node)
         for i = 1, #children do
-            draw_scene_node(children[i])
+            local child = children[i]
+            local clip = ugui.internal.get_child_clip_rect(node, child)
+            if clip then
+                current_painter:save()
+                current_painter:clip(ugui.internal.rect_to_painter_rect(clip))
+            end
+            local inherited = control._t_opacity and ugui.internal.clamp(control._t_opacity, 0, 1) or 1
+            draw_scene_node(child, transition_opacity * inherited)
+            if clip then
+                current_painter:restore()
+            end
         end
 
-        if control.clip_children then
-            current_painter:restore()
-        end
-
+        current_painter:restore()
         revert_styler_mixin()
     end
 
@@ -484,6 +523,7 @@ ugui.end_frame = function()
     current_painter:restore()
 
 
+    ugui.internal.save_transition_scene()
     ugui.internal.scene_root.children = {}
     ugui.internal.scene_root.sorted_children = nil
     ugui.internal.scene_nodes_by_uid = {}
@@ -517,6 +557,13 @@ end
 ---@field public sorted_children SceneNode[]?
 ---@field public order integer
 ---@field public is_enabled boolean The control's effective enabled state, including its ancestors.
+---@field public exiting boolean? Whether this is a non-interactive retained exit visual.
+---@field public transition_shell boolean? Whether only this node's geometry and clipping remain for descendant exits.
+---@field public scroll_x number? Horizontal content offset in pixels.
+---@field public scroll_y number? Vertical content offset in pixels.
+---@field public overflow_range_x number? Horizontal scroll range in pixels.
+---@field public overflow_range_y number? Vertical scroll range in pixels.
+---@field public overflow_viewport {width: number, height: number}? Content viewport excluding scrollbars.
 
 ---@class SceneRoot
 ---@field public children SceneNode[]
@@ -1119,6 +1166,7 @@ local control_impl = function(control, control_type, fn, initialize_data)
     local return_value
     local render_rect = ugui.internal.compute_render_rect(control)
     control._render_rect = render_rect
+    ugui.internal.prepare_transition(control)
     local revert_styler_mixin = ugui.internal.apply_styler_mixin(control)
 
     local is_new_control = ugui.internal.control_data[control._uid] == nil
@@ -1131,6 +1179,10 @@ local control_impl = function(control, control_type, fn, initialize_data)
     local control_data = ugui.internal.control_data[control._uid]
     if is_new_control and initialize_data then
         initialize_data(control, control_data)
+    end
+
+    if control_type == 'listbox' then
+        control_data.ugui_overflow_layout = ugui.internal.measure_overflow(control, control_type)
     end
 
     -- Run the control callback once to stabilize the return value for the first state.
@@ -1159,11 +1211,14 @@ local control_impl = function(control, control_type, fn, initialize_data)
 
     ugui.internal.scene_node_order = ugui.internal.scene_node_order + 1
     local parent_node = ugui.internal.current_parent or ugui.internal.scene_root
+    local x_mode, y_mode = ugui.internal.get_overflow_modes(control, control_type)
     local scene_node = {
         control = control,
         type = control_type,
         parent = parent_node,
         children = {},
+        scroll_x = x_mode == ugui.overflow.scroll and (control_data.overflow_scroll_x or 0) or 0,
+        scroll_y = y_mode == ugui.overflow.scroll and (control_data.overflow_scroll_y or 0) or 0,
         order = ugui.internal.scene_node_order,
         is_enabled = control.is_enabled ~= false
             and (parent_node == ugui.internal.scene_root or parent_node.is_enabled ~= false),
@@ -1186,6 +1241,8 @@ local control_impl = function(control, control_type, fn, initialize_data)
             error(error_message, 0)
         end
     end
+
+    ugui.internal.layout_overflow(scene_node)
 
     local context_menu_state = ugui.internal.context_menu_state
     if control._uid ~= ugui.internal.context_menu_uid and context_menu_state
@@ -1713,7 +1770,7 @@ local function uid_segment(uid)
         return uid
     end
     local integer = math.tointeger(uid)
-    return integer and tostring(integer) or string.format('%.17g', uid)
+    return integer and string.format('%d', integer) or string.format('%.17g', uid)
 end
 
 ---Resolves a local UID against the current scene parent. Strings are private, already-resolved IDs.
@@ -1739,7 +1796,7 @@ end
 ugui.internal.child_uid = function(control, slot)
     local node = ugui.internal.scene_nodes_by_uid[control._uid]
     local uid = node and node.control == control and control._uid or ugui.internal.resolve_uid(control.uid)
-    return uid_segment(uid) .. '/' .. tostring(slot)
+    return uid_segment(uid) .. '/' .. uid_segment(slot)
 end
 
 ---Tests ownership even for private controls reparented to the scene root, such as popups.
@@ -1764,6 +1821,246 @@ ugui.internal.find_node = function(uid)
     return ugui.internal.scene_nodes_by_uid[uid]
 end
 
+ugui.internal.get_overflow_modes = function(control, control_type)
+    local x_mode, y_mode = control.x_overflow, control.y_overflow
+    if control_type == 'listbox' then
+        x_mode = x_mode or (control.horizontal_scroll and ugui.overflow.scroll or ugui.overflow.clip)
+        y_mode = y_mode or ugui.overflow.scroll
+    end
+    return x_mode, y_mode
+end
+
+---@param control ListBox
+---@return UguiRect
+ugui.internal.get_listbox_viewport = function(control)
+    local rect = control._render_rect
+    local layout = ugui.internal.control_data[control._uid].ugui_overflow_layout
+    return {x = rect.x, y = rect.y, width = layout.viewport_width, height = layout.viewport_height}
+end
+
+---Returns the per-axis clipping bounds for a child, or nil when both axes are visible.
+---@param node SceneNode
+---@param child SceneNode
+---@return UguiRect?
+ugui.internal.get_child_clip_rect = function(node, child)
+    local control = node.control
+    local x_mode, y_mode = ugui.internal.get_overflow_modes(control, node.type)
+    local clip_x = x_mode and x_mode ~= ugui.overflow.visible
+    local clip_y = y_mode and y_mode ~= ugui.overflow.visible
+    if not clip_x and not clip_y then
+        return nil
+    end
+    local rect = control._render_rect
+    local viewport = node.overflow_viewport or rect
+    local scrollbar = child.control._overflow_scrollbar
+    local window = ugui.internal.environment.window_size
+    local start = ugui.internal.untransform_point(control, {x = 0, y = 0})
+    local finish = ugui.internal.untransform_point(control, window)
+    if not start or not finish then
+        return {x = 0, y = 0, width = 0, height = 0}
+    end
+    return {
+        x = clip_x and rect.x or math.min(start.x, finish.x),
+        y = clip_y and rect.y or math.min(start.y, finish.y),
+        width = clip_x and (scrollbar and rect.width or viewport.width) or math.abs(finish.x - start.x),
+        height = clip_y and (scrollbar and rect.height or viewport.height) or math.abs(finish.y - start.y),
+    }
+end
+
+---Measures unscrolled child bounds, including descendants that are visible outside their parent.
+local function child_content_bounds(node)
+    local width, height = 0, 0
+    for i = 1, #node.children do
+        local child = node.children[i]
+        local control = child.control
+        if not control._overflow_scrollbar then
+            local child_width, child_height = child_content_bounds(child)
+            local rect = control.rectangle
+            local x_mode, y_mode = ugui.internal.get_overflow_modes(control, child.type)
+            if x_mode and x_mode ~= ugui.overflow.visible then
+                child_width = rect.width
+            end
+            if y_mode and y_mode ~= ugui.overflow.visible then
+                child_height = rect.height
+            end
+            width = math.max(width, rect.x + math.max(rect.width, child_width))
+            height = math.max(height, rect.y + math.max(rect.height, child_height))
+        end
+    end
+    return width, height
+end
+
+---Measures content and resolves the mutually dependent scrollbar sizes.
+ugui.internal.measure_overflow = function(control, control_type, node)
+    local rect = control.rectangle
+    local size = control.measure and control.measure(control, {x = rect.width, y = rect.height})
+    local width, height = 0, 0
+    if size then
+        width, height = size.x, size.y
+    elseif node then
+        width, height = child_content_bounds(node)
+    end
+    local x_mode, y_mode = ugui.internal.get_overflow_modes(control, control_type)
+    local scroll_x = x_mode == ugui.overflow.scroll
+    local scroll_y = y_mode == ugui.overflow.scroll
+    local thickness = ugui.standard_styler.params.scrollbar.thickness
+    local show_x, show_y = false, false
+    local viewport_width, viewport_height = rect.width, rect.height
+    -- A scrollbar can cause overflow on the other axis, so resolve both together.
+    for _ = 1, 3 do
+        show_x = scroll_x and width > viewport_width
+        show_y = scroll_y and height > viewport_height
+        viewport_width = math.max(0, rect.width - (show_y and thickness or 0))
+        viewport_height = math.max(0, rect.height - (show_x and thickness or 0))
+    end
+    return {
+        width = width,
+        height = height,
+        viewport_width = viewport_width,
+        viewport_height = viewport_height,
+        show_x = show_x,
+        show_y = show_y,
+        uses_child_sizes = size == nil,
+    }
+end
+
+---Finalizes a control's viewport and places its reserved scrollbar children.
+---@param node SceneNode
+ugui.internal.layout_overflow = function(node)
+    local control = node.control
+    local x_mode, y_mode = ugui.internal.get_overflow_modes(control, node.type)
+    if x_mode ~= ugui.overflow.scroll and y_mode ~= ugui.overflow.scroll then
+        return
+    end
+    local data = ugui.internal.control_data[control._uid]
+    local layout = node.type == 'listbox' and data.ugui_overflow_layout
+    if not layout or layout.uses_child_sizes then
+        layout = ugui.internal.measure_overflow(control, node.type, node)
+    end
+    if node.type == 'listbox' then
+        data.ugui_overflow_layout = layout
+    end
+    local width, height = layout.width, layout.height
+    local viewport_width, viewport_height = layout.viewport_width, layout.viewport_height
+    local show_x, show_y = layout.show_x, layout.show_y
+    local rect = control.rectangle
+    local thickness = ugui.standard_styler.params.scrollbar.thickness
+    node.overflow_viewport = {width = viewport_width, height = viewport_height}
+    local range_x = math.max(0, width - viewport_width)
+    local range_y = math.max(0, height - viewport_height)
+    data.ugui_scroll_x = show_x and ugui.internal.clamp(data.ugui_scroll_x or 0, 0, 1) or 0
+    data.ugui_scroll_y = show_y and ugui.internal.clamp(data.ugui_scroll_y or 0, 0, 1) or 0
+
+    node.overflow_range_x = show_x and range_x or 0
+    node.overflow_range_y = show_y and range_y or 0
+    -- Route each wheel axis to the nearest ancestor that can scroll that axis.
+    local hovered_uid = ugui.internal.hovered_control
+    local hovered = ugui.internal.find_node(hovered_uid)
+    if hovered_uid == ugui.internal.child_uid(control, -1)
+        or hovered_uid == ugui.internal.child_uid(control, -2) then
+        -- These reserved children have not been placed yet this frame.
+        hovered = node
+    end
+    local delta = ugui.internal.environment._scroll_delta
+    local dx, dy = delta.x, delta.y
+
+    if ugui.internal.environment.shift then
+        dx, dy = dy, dx
+    end
+    while hovered and hovered ~= ugui.internal.scene_root do
+        if hovered == node then
+            local captured = ugui.internal.mouse_captured_control
+            if node.is_enabled and (captured == nil or captured == control._uid)
+                and ((node.type == 'listbox' and captured == control._uid)
+                    or ugui.internal.hittest_node(ugui.internal.environment.mouse_position, node)) then
+                if show_x and range_x > 0 then
+                    data.ugui_scroll_x = ugui.internal.clamp(data.ugui_scroll_x - dx * 30 / range_x, 0, 1)
+                end
+                if show_y and range_y > 0 then
+                    local step = node.type == 'listbox' and 1 / math.max(1, #control.items) or 30 / range_y
+                    data.ugui_scroll_y = ugui.internal.clamp(data.ugui_scroll_y - dy * step, 0, 1)
+                end
+            end
+            break
+        end
+        if (hovered.overflow_range_x or 0) > 0 then
+            dx = 0
+        end
+        if (hovered.overflow_range_y or 0) > 0 then
+            dy = 0
+        end
+        hovered = hovered.parent
+    end
+
+    ugui.internal.with_parent(node, function()
+        if show_x and viewport_width > 0 then
+            data.ugui_scroll_x = ugui.scrollbar({
+                uid = -1,
+                _overflow_scrollbar = true,
+                _overflow_axis = 'x',
+                opacity = control.opacity,
+                z_index = math.huge,
+                rectangle = {x = 0, y = viewport_height, width = viewport_width, height = math.min(thickness, rect.height)},
+                value = data.ugui_scroll_x,
+                ratio = viewport_width / width,
+            })
+        end
+        if show_y and viewport_height > 0 then
+            data.ugui_scroll_y = ugui.scrollbar({
+                uid = -2,
+                _overflow_scrollbar = true,
+                _overflow_axis = 'y',
+                opacity = control.opacity,
+                z_index = math.huge,
+                rectangle = {x = viewport_width, y = 0, width = math.min(thickness, rect.width), height = rect.height},
+                value = data.ugui_scroll_y,
+                ratio = viewport_height / height,
+            })
+        end
+    end)
+    node.scroll_x = data.ugui_scroll_x * range_x
+    node.scroll_y = data.ugui_scroll_y * range_y
+    data.overflow_scroll_x = node.scroll_x
+    data.overflow_scroll_y = node.scroll_y
+    ugui.internal.update_render_rect(control)
+end
+
+---Returns the composed axis-aligned transform in scene coordinates, without affecting layout.
+---@param control UguiControl
+---@param parent_only boolean? Exclude the control's own transform.
+---@return number sx, number sy, number tx, number ty
+ugui.internal.get_control_transform = function(control, parent_only)
+    local node = ugui.internal.find_node(control._uid)
+    local parent = node and node.parent or ugui.internal.current_parent
+    local sx, sy, tx, ty = 1, 1, 0, 0
+    if parent and parent ~= ugui.internal.scene_root then
+        sx, sy, tx, ty = ugui.internal.get_control_transform(parent.control)
+    end
+    if not parent_only then
+        local rect = control._render_rect
+        local cx = rect.x + (control.cx or rect.width / 2)
+        local cy = rect.y + (control.cy or rect.height / 2)
+        local local_sx, local_sy = control.sx or 1, control.sy or 1
+        tx = tx + sx * ((control._t_tx or control.tx or 0) + cx * (1 - local_sx))
+        ty = ty + sy * ((control._t_ty or control.ty or 0) + cy * (1 - local_sy))
+        sx, sy = sx * local_sx, sy * local_sy
+    end
+    return sx, sy, tx, ty
+end
+
+---Maps a scene point back into the absolute layout coordinates used by control callbacks.
+---@param control UguiControl
+---@param point UguiVector2
+---@param parent_only boolean?
+---@return UguiVector2?
+ugui.internal.untransform_point = function(control, point, parent_only)
+    local sx, sy, tx, ty = ugui.internal.get_control_transform(control, parent_only)
+    if sx == 0 or sy == 0 then
+        return nil
+    end
+    return {x = (point.x - tx) / sx, y = (point.y - ty) / sy}
+end
+
 ---Checks whether a point is inside every clipping ancestor of a node.
 ---@param point UguiVector2
 ---@param node SceneNode
@@ -1772,12 +2069,14 @@ ugui.internal.is_point_inside_clip_ancestors = function(point, node)
     local ancestor = node.parent
     while ancestor and ancestor ~= ugui.internal.scene_root do
         local control = ancestor.control
-        if control.clip_children and not ugui.internal.point_in_rect(
-                point,
-                control._render_rect
-            ) then
-            return false
+        local clip = ugui.internal.get_child_clip_rect(ancestor, node)
+        if clip then
+            local local_point = ugui.internal.untransform_point(control, point)
+            if not local_point or not ugui.internal.point_in_rect(local_point, clip) then
+                return false
+            end
         end
+        node = ancestor
         ancestor = ancestor.parent
     end
     return true
@@ -1788,7 +2087,15 @@ end
 ---@param node SceneNode
 ---@return boolean
 ugui.internal.hittest_node = function(point, node)
-    return ugui.internal.hittest(point, node.control)
+    local ancestor = node
+    while ancestor and ancestor ~= ugui.internal.scene_root do
+        if ancestor.exiting or (ancestor.control._t_opacity and ancestor.control._t_opacity <= 0) then
+            return false
+        end
+        ancestor = ancestor.parent
+    end
+    local local_point = ugui.internal.untransform_point(node.control, point)
+    return local_point ~= nil and ugui.internal.hittest(local_point, node.control)
         and ugui.internal.is_point_inside_clip_ancestors(point, node)
 end
 
@@ -1814,7 +2121,12 @@ end
 ---@return UguiRect
 ugui.internal.compute_render_rect = function(control)
     local parent = ugui.internal.current_parent
-    return render_rectangle_from_parent(control.rectangle, get_parent_render_rectangle(parent))
+    local rect = render_rectangle_from_parent(control.rectangle, get_parent_render_rectangle(parent))
+    if parent and parent ~= ugui.internal.scene_root and not control._overflow_scrollbar then
+        rect.x = rect.x - (parent.scroll_x or 0)
+        rect.y = rect.y - (parent.scroll_y or 0)
+    end
+    return rect
 end
 
 
@@ -1843,7 +2155,11 @@ ugui.internal.update_render_rect = function(control)
             current_control.rectangle,
             parent_rectangle
         )
-        current_control.render_rect = render_rect
+        if current_node.parent ~= ugui.internal.scene_root and not current_control._overflow_scrollbar then
+            render_rect.x = render_rect.x - (current_node.parent.scroll_x or 0)
+            render_rect.y = render_rect.y - (current_node.parent.scroll_y or 0)
+        end
+        current_control._render_rect = render_rect
         for i = 1, #current_node.children do
             update_node(current_node.children[i], render_rect)
         end
@@ -1860,6 +2176,444 @@ end
 ---@return number # The new limited value.
 ugui.internal.clamp = function(value, min, max)
     return math.max(math.min(value, max), min)
+end
+
+-- ------------------------------------------------------------
+--   src/ugui/transitions.lua
+-- ------------------------------------------------------------
+
+--
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
+--
+-- SPDX-License-Identifier: GPL-3.0-or-later
+--
+--
+
+---@alias UguiEasingFunc fun(t: number): number
+
+ugui.easing = {}
+
+ugui.easing.linear = function(t)
+    return t
+end
+ugui.easing.in_sine = function(t)
+    if t == 0 or t == 1 then return t end
+    return 1 - math.cos((t * math.pi) / 2)
+end
+ugui.easing.out_sine = function(t)
+    if t == 0 or t == 1 then return t end
+    return math.sin((t * math.pi) / 2)
+end
+ugui.easing.in_out_sine = function(t)
+    return -(math.cos(math.pi * t) - 1) / 2
+end
+ugui.easing.in_quad = function(t)
+    return t * t
+end
+ugui.easing.out_quad = function(t)
+    return 1 - (1 - t) * (1 - t)
+end
+ugui.easing.in_out_quad = function(t)
+    if t < 0.5 then return 2 * t * t end
+    return 1 - (-2 * t + 2) ^ 2 / 2
+end
+ugui.easing.in_cubic = function(t)
+    return t * t * t
+end
+ugui.easing.out_cubic = function(t)
+    return 1 - (1 - t) ^ 3
+end
+ugui.easing.in_out_cubic = function(t)
+    if t < 0.5 then return 4 * t * t * t end
+    return 1 - (-2 * t + 2) ^ 3 / 2
+end
+ugui.easing.in_quart = function(t)
+    return t * t * t * t
+end
+ugui.easing.out_quart = function(t)
+    return 1 - (1 - t) ^ 4
+end
+ugui.easing.in_out_quart = function(t)
+    if t < 0.5 then return 8 * t * t * t * t end
+    return 1 - (-2 * t + 2) ^ 4 / 2
+end
+ugui.easing.in_quint = function(t)
+    return t * t * t * t * t
+end
+ugui.easing.out_quint = function(t)
+    return 1 - (1 - t) ^ 5
+end
+ugui.easing.in_out_quint = function(t)
+    if t < 0.5 then return 16 * t * t * t * t * t end
+    return 1 - (-2 * t + 2) ^ 5 / 2
+end
+ugui.easing.in_expo = function(t)
+    if t == 0 or t == 1 then return t end
+    return 2 ^ (10 * t - 10)
+end
+ugui.easing.out_expo = function(t)
+    if t == 0 or t == 1 then return t end
+    return 1 - 2 ^ (-10 * t)
+end
+ugui.easing.in_out_expo = function(t)
+    if t == 0 or t == 1 then return t end
+    if t < 0.5 then return 2 ^ (20 * t - 10) / 2 end
+    return (2 - 2 ^ (-20 * t + 10)) / 2
+end
+ugui.easing.in_circ = function(t)
+    return 1 - math.sqrt(1 - t ^ 2)
+end
+ugui.easing.out_circ = function(t)
+    return math.sqrt(1 - (t - 1) ^ 2)
+end
+ugui.easing.in_out_circ = function(t)
+    if t < 0.5 then return (1 - math.sqrt(1 - (2 * t) ^ 2)) / 2 end
+    return (math.sqrt(1 - (-2 * t + 2) ^ 2) + 1) / 2
+end
+ugui.easing.in_back = function(t)
+    if t == 0 or t == 1 then return t end
+    local c1 = 1.70158
+    local c3 = c1 + 1
+    return c3 * t * t * t - c1 * t * t
+end
+ugui.easing.out_back = function(t)
+    if t == 0 or t == 1 then return t end
+    local c1 = 1.70158
+    local c3 = c1 + 1
+    return 1 + c3 * (t - 1) ^ 3 + c1 * (t - 1) ^ 2
+end
+ugui.easing.in_out_back = function(t)
+    if t == 0 or t == 1 then return t end
+    local c2 = 1.70158 * 1.525
+    if t < 0.5 then return ((2 * t) ^ 2 * ((c2 + 1) * 2 * t - c2)) / 2 end
+    return ((2 * t - 2) ^ 2 * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2
+end
+ugui.easing.in_elastic = function(t)
+    if t == 0 or t == 1 then return t end
+    local c4 = (2 * math.pi) / 3
+    return -2 ^ (10 * t - 10) * math.sin((t * 10 - 10.75) * c4)
+end
+ugui.easing.out_elastic = function(t)
+    if t == 0 or t == 1 then return t end
+    local c4 = (2 * math.pi) / 3
+    return 2 ^ (-10 * t) * math.sin((t * 10 - 0.75) * c4) + 1
+end
+ugui.easing.in_out_elastic = function(t)
+    if t == 0 or t == 1 then return t end
+    local c5 = (2 * math.pi) / 4.5
+    if t < 0.5 then
+        return -(2 ^ (20 * t - 10) * math.sin((20 * t - 11.125) * c5)) / 2
+    end
+    return (2 ^ (-20 * t + 10) * math.sin((20 * t - 11.125) * c5)) / 2 + 1
+end
+
+local function out_bounce(t)
+    local n1 = 7.5625
+    local d1 = 2.75
+    if t < 1 / d1 then
+        return n1 * t * t
+    elseif t < 2 / d1 then
+        t = t - 1.5 / d1
+        return n1 * t * t + 0.75
+    elseif t < 2.5 / d1 then
+        t = t - 2.25 / d1
+        return n1 * t * t + 0.9375
+    end
+    t = t - 2.625 / d1
+    return n1 * t * t + 0.984375
+end
+
+ugui.easing.in_bounce = function(t)
+    return 1 - out_bounce(1 - t)
+end
+ugui.easing.out_bounce = out_bounce
+ugui.easing.in_out_bounce = function(t)
+    if t < 0.5 then return (1 - out_bounce(1 - 2 * t)) / 2 end
+    return (1 + out_bounce(2 * t - 1)) / 2
+end
+
+
+---@class UguiTransition
+---@field public duration number The duration of the transition in seconds. Interrupted transitions restart with the new transition's full duration and blend from the displayed opacity and translation.
+---@field public delay number The delay before the transition starts in seconds.
+---@field public easing UguiEasingFunc The easing function, applied exactly once by tick. Callers must not pre-ease progress.
+---@field public tick fun(control: UguiControl, t: number): number? Receives raw normalized progress: 0 uses the transition parameter values, 1 uses the control's current values. May return eased progress so interruption blending follows the same easing. Otherwise blending uses raw progress.
+
+ugui.transition = {}
+
+local function default(value, fallback)
+    if value == nil then return fallback end
+    return value
+end
+
+local function transition_params(params)
+    local duration = default(params.duration, 0.25)
+    local delay = default(params.delay, 0)
+    local easing = default(params.easing, ugui.easing.in_out_cubic)
+    return duration, delay, easing
+end
+
+---@class UguiFadeParams
+---@field public duration number? The duration of the transition in seconds. Defaults to `0.25`.
+---@field public delay number? The delay before the transition starts in seconds. Defaults to `0`.
+---@field public easing UguiEasingFunc? The easing function for the transition. Defaults to `ugui.easing.in_out_cubic`.
+---@field public opacity number? The starting opacity for enter and ending opacity for exit. The other endpoint is `control.opacity`. Defaults to `0`.
+---@param params UguiFadeParams? Optional transition parameters.
+---@return UguiTransition transition
+function ugui.transition.fade(params)
+    params = default(params, {})
+    local duration, delay, easing = transition_params(params)
+    local opacity = default(params.opacity, 0)
+    return {
+        duration = duration,
+        delay = delay,
+        easing = easing,
+        tick = function(control, t)
+            local progress = easing(t)
+            local to_opacity = default(control.opacity, 1)
+            control._t_opacity = opacity + (to_opacity - opacity) * progress
+            return progress
+        end,
+    }
+end
+
+---@class UguiFlyParams
+---@field public duration number? The duration of the transition in seconds. Defaults to `0.25`.
+---@field public delay number? The delay before the transition starts in seconds. Defaults to `0`.
+---@field public easing UguiEasingFunc? The easing function for the transition. Defaults to `ugui.easing.in_out_cubic`.
+---@field public opacity number? The starting opacity for enter and ending opacity for exit. The other endpoint is `control.opacity`. Defaults to `0`.
+---@field public x number? The starting horizontal translation for enter and ending translation for exit. The other endpoint is `control.tx. Defaults to `0`.
+---@field public y number? The starting vertical translation for enter and ending translation for exit. The other endpoint is `control.ty`. Defaults to `20`.
+---@param params UguiFlyParams? Optional transition parameters.
+---@return UguiTransition transition
+function ugui.transition.fly(params)
+    params = default(params, {})
+    local duration, delay, easing = transition_params(params)
+    local opacity = default(params.opacity, 0)
+    local x = default(params.x, 0)
+    local y = default(params.y, 20)
+    return {
+        duration = duration,
+        delay = delay,
+        easing = easing,
+        tick = function(control, t)
+            local progress = easing(t)
+            local to_opacity = default(control.opacity, 1)
+            local to_x = default(control.tx, 0)
+            local to_y = default(control.ty, 0)
+            control._t_opacity = opacity + (to_opacity - opacity) * progress
+            control._t_tx = x + (to_x - x) * progress
+            control._t_ty = y + (to_y - y) * progress
+            return progress
+        end,
+    }
+end
+
+local transition_states = {}
+local previous_transition_scene = {}
+
+local function clear_transition_values(control)
+    control._t_opacity, control._t_tx, control._t_ty = nil, nil, nil
+end
+
+local function advance_transition(state, now)
+    local transition = state.transition
+    if not transition then return end
+    local elapsed = now - state.started - (transition.delay or 0)
+    if elapsed < 0 then return end
+    local duration = transition.duration or 0.25
+    local distance = duration == 0 and 1 or elapsed / duration
+    state.progress = ugui.internal.clamp(state.from + state.direction * distance, 0, 1)
+end
+
+local function start_transition(state, transition, direction, now)
+    local interrupted = state.values and (direction == 1 and state.direction == -1
+        or direction == -1 and state.direction == 1 and state.progress < 1)
+    if interrupted and transition then
+        state.rebase = state.values
+        state.offsets = nil
+        state.progress = direction == 1 and 0 or 1
+    else
+        state.rebase, state.offsets = nil, nil
+    end
+    state.transition = transition
+    state.direction = direction
+    state.started = now
+    state.from = state.progress
+end
+
+local transition_fields = {
+    {override = '_t_opacity', field = 'opacity', default = 1},
+    {override = '_t_tx', field = 'tx', default = 0},
+    {override = '_t_ty', field = 'ty', default = 0},
+}
+
+local function tick_transition(state, control)
+    local progress = default(state.transition.tick(control, state.progress), state.progress)
+    local weight = state.direction == 1 and 1 - progress or progress
+    local values = {}
+    if state.rebase and not state.offsets then
+        state.offsets = {}
+        for _, field in ipairs(transition_fields) do
+            local value = default(control[field.override], default(control[field.field], field.default))
+            state.offsets[field.override] = state.rebase[field.override] - value
+        end
+    end
+    for _, field in ipairs(transition_fields) do
+        local value = default(control[field.override], default(control[field.field], field.default))
+        if state.offsets then
+            -- Fade the interruption correction away over the new transition's full duration.
+            value = value + state.offsets[field.override] * weight
+            control[field.override] = value
+        end
+        values[field.override] = value
+    end
+    state.values = values
+    if state.progress == (state.direction == 1 and 1 or 0) then
+        state.rebase, state.offsets = nil, nil
+    end
+end
+
+local function remove_transitions(control)
+    control.in_transition, control.out_transition, control.transition = nil, nil, nil
+    clear_transition_values(control)
+end
+
+ugui.internal.prepare_transition = function(control)
+    clear_transition_values(control)
+    if ugui.PREFERS_REDUCED_MOTION then
+        remove_transitions(control)
+    end
+    local uid = control._uid
+    local intro = control.in_transition or control.transition
+    local outro = control.out_transition or control.transition
+    if not intro and not outro then
+        transition_states[uid] = nil
+        return
+    end
+    local now = ugui.internal.transition_time
+    local state = transition_states[uid]
+    if not state then
+        state = {progress = intro and 0 or 1}
+        transition_states[uid] = state
+        start_transition(state, intro, 1, now)
+    elseif state.direction == -1 then
+        advance_transition(state, now)
+        start_transition(state, intro, 1, now)
+        if not intro then state.progress = 1 end
+    else
+        state.transition = intro
+    end
+    state.seen = ugui.internal.frame_index
+    advance_transition(state, now)
+    if intro then tick_transition(state, control) end
+end
+
+ugui.internal.finish_transitions = function()
+    if ugui.PREFERS_REDUCED_MOTION then
+        transition_states, previous_transition_scene = {}, {}
+        for _, node in pairs(ugui.internal.scene_nodes_by_uid) do
+            remove_transitions(node.control)
+        end
+        return
+    end
+    local now = ugui.internal.transition_time
+    local frame = ugui.internal.frame_index
+    local nodes = ugui.internal.scene_nodes_by_uid
+    local function restore(previous, parent, inherited_exit)
+        local control = previous.control
+        local uid = control._uid
+        local current = nodes[uid]
+        if current then
+            for _, child in ipairs(previous.children) do
+                restore(child, current, false)
+            end
+            return
+        end
+        local outro = control.out_transition or control.transition
+        local shell = not outro and not inherited_exit
+        local state = transition_states[uid]
+        if outro then
+            if not state then
+                state = {progress = 1}
+                transition_states[uid] = state
+            end
+            if state.direction ~= -1 then
+                advance_transition(state, now)
+                start_transition(state, outro, -1, now)
+            end
+            advance_transition(state, now)
+            if state.progress <= 0 and now >= state.started + (outro.delay or 0) then
+                shell = true
+            end
+        end
+        previous.parent = parent
+        previous.transition_shell = shell
+        previous.children, previous.sorted_children = previous.children or {}, nil
+        previous.exiting, previous.is_enabled = true, false
+        control.hittestable = false
+        parent.children[#parent.children + 1] = previous
+        parent.sorted_children = nil
+        nodes[uid] = previous
+        local old_children = previous.children
+        previous.children = {}
+        for _, child in ipairs(old_children) do
+            restore(child, previous, not shell)
+        end
+        if shell and #previous.children == 0 then
+            nodes[uid] = nil
+            table.remove(parent.children)
+            return
+        end
+        if outro then
+            clear_transition_values(control)
+            tick_transition(state, control)
+        end
+        if state then state.kept = frame end
+        ugui.internal.update_render_rect(control)
+    end
+    for _, previous in ipairs(previous_transition_scene) do
+        restore(previous, ugui.internal.scene_root, false)
+    end
+    for uid, state in pairs(transition_states) do
+        if state.seen ~= frame and state.kept ~= frame then
+            transition_states[uid] = nil
+        end
+    end
+end
+
+local function shallow_copy(value)
+    local result = {}
+    for key, item in pairs(value) do result[key] = item end
+    return result
+end
+
+ugui.internal.save_transition_scene = function()
+    if ugui.PREFERS_REDUCED_MOTION then
+        previous_transition_scene = {}
+        return
+    end
+    local function snapshot(node, inherited)
+        local control = node.control
+        local animated = inherited or control.in_transition or control.out_transition or control.transition
+        local children = {}
+        for _, child in ipairs(node.children) do
+            local saved = snapshot(child, animated)
+            if saved then children[#children + 1] = saved end
+        end
+        if not animated and #children == 0 then return nil end
+        local saved = shallow_copy(node)
+        saved.children, saved.sorted_children, saved.parent = children, nil, nil
+        saved.control = shallow_copy(control)
+        saved.control.rectangle = shallow_copy(control.rectangle)
+        saved.control._render_rect = shallow_copy(control._render_rect)
+        return saved
+    end
+    previous_transition_scene = {}
+    for _, node in ipairs(ugui.internal.scene_root.children) do
+        local saved = snapshot(node, false)
+        if saved then previous_transition_scene[#previous_transition_scene + 1] = saved end
+    end
 end
 
 -- ------------------------------------------------------------
@@ -2599,8 +3353,8 @@ ugui.standard_styler = {
         local content_bounds = ugui.standard_styler.get_desired_listbox_content_bounds(control)
         -- item y position:
         -- y = (20 * (i - 1)) - (scroll_y * ((20 * #control.items) - rectangle.height))
-        local scroll_x = data.scroll_x and data.scroll_x or 0
-        local scroll_y = data.scroll_y and data.scroll_y or 0
+        local scroll_x = data.ugui_scroll_x or 0
+        local scroll_y = data.ugui_scroll_y or 0
 
         local index_begin = (scroll_y *
                 (content_bounds.height - rectangle.height)) /
@@ -3353,7 +4107,7 @@ ugui.standard_styler = {
     ---Draws a ListBox with the specified parameters.
     ---@param control ListBox The control table.
     draw_listbox = function(control)
-        ugui.standard_styler.draw_list(control, control._render_rect)
+        ugui.standard_styler.draw_list(control, ugui.internal.get_listbox_viewport(control))
     end,
 
     ---Gets the desired bounds of a listbox's content.
@@ -4196,21 +4950,34 @@ end
 
 ---@alias UguiBackgroundSize "auto" | "cover" | "contain" | UguiVector2
 
+
+
 ---@class UguiControl
----@field public uid UID|ResolvedUID The control's local numeric identifier, unique among siblings and stable across frames. Ancestors scope its persistent state. Negative local IDs are reserved for built-in children, leaving non-negative sibling IDs available to callers. Resolved string IDs are reserved for library-owned controls.
+---@field public uid UID|ResolvedUID The control's local numeric identifier, unique among siblings and stable across frames. Ancestors scope its persistent state. Negative local IDs are reserved for built-in children (-1 and -2 for horizontal and vertical overflow scrollbars), leaving non-negative sibling IDs available to callers. Resolved string IDs are reserved for library-owned controls.
 ---@field public draw (fun(control: UguiControl))? Draws the control. Use `control._render_rect` instead of `control.rectangle`.
+---@field public measure (fun(control: UguiControl, constraint: UguiVector2): UguiVector2?)? Computes the desired content size given the constraints. Returning nil means using child sizes. Must not mutate `control`.
 ---@field public hittest (fun(control: UguiControl, point: UguiVector2): boolean)? Provides hittesting for the control. By default, the check is whether the point is inside `control._render_rect`.
 ---@field public get_return_value (fun(control: UguiControl, data: any): ControlReturnValue)? Computes the control's current return value and updates its data; use `control._render_rect` for absolute bounds.
 ---@field public hittestable boolean? Whether this control instance participates in hit-testing. Defaults to `true`, except controls with a different placement default, such as labels and panels. Set this to `true` or `false` to override the default.
 ---@field public styler_mixin any? An optional styler mixin table which can override specific styler parameters for this control. Inherited by children.
 ---@field public rectangle UguiRect The control's rectangle relative to its parent's origin. Top-level controls are relative to the scene origin.
----@field public clip_children boolean? Whether to clip child controls to this control's rectangle. Defaults to false.
+---@field public x_overflow UguiOverflow? Horizontal overflow behavior for child controls. Defaults to `ugui.overflow.visible`.
+---@field public y_overflow UguiOverflow? Vertical overflow behavior for child controls. Defaults to `ugui.overflow.visible`.
 ---@field public is_enabled boolean? Whether the control is enabled. If nil or true, the control is enabled. A disabled ancestor disables this control too.
 ---@field public tooltip string? The control's tooltip. If nil, no tooltip will be shown.
 ---@field public context_menu MenuItem[]? Items shown in a context menu when this control is right-clicked.
 ---@field public plaintext boolean? Whether the control's text content is drawn as plain text without rich rendering.
 ---@field public z_index integer? The control's Z-index. If nil, `0` is assumed.
 ---@field public opacity number? The control's opacity, normally in [0, 1]. Defaults to 1.
+---@field public tx number? The control's horizontal translate transform in pixels. Affects hittesting and rendering, but not layout. Defaults to `0`.
+---@field public ty number? The control's vertical translate transform in pixels. Affects hittesting and rendering, but not layout. Defaults to `0`.
+---@field public cx number? The control's horizontal transform origin in pixels relative to the control's origin. Used by `sx`/`sy`. Defaults to `rectangle.width / 2`.
+---@field public cy number? The control's vertical transform origin in pixels relative to the control's origin. Used by `sx`/`sy`. Defaults to `rectangle.height / 2`.
+---@field public sx number? The control's horizontal scale factor. Affects hittesting and rendering, but not layout. Defaults to `1`.
+---@field public sy number? The control's vertical scale factor. Affects hittesting and rendering, but not layout. Defaults to `1`.
+---@field public in_transition UguiTransition? Runs when this UID starts being placed, with progress from 0 to 1. Does not affect layout.
+---@field public out_transition UguiTransition? Runs when this UID stops being placed, with progress from 1 to 0. The previous visual is retained without accepting input or running placement callbacks until the exit completes.
+---@field public transition UguiTransition? Fallback for both `in_transition` and `out_transition`. Explicit per-direction transitions take precedence. Reappearing during an exit reverses from the current progress.
 ---@field public fill UguiColorSource? The control's fill color. The fill is drawn before the control graphics. If nil, no fill will be drawn.
 ---@field public stroke UguiColorSource? The control's stroke color. The stroke is drawn after the control graphics. If nil, no stroke will be drawn.
 ---@field public stroke_style PainterStrokeStyle? The control's stroke style. Requires `stroke`. If nil, the default stroke style will be used.
@@ -4223,6 +4990,10 @@ end
 ---@field public background_nineslice_center PainterRect? Center rectangle for nine-slice rendering. Requires `background_image` and `background_nineslice_source`.
 ---@field public _uid ResolvedUID? **Internal, only use when authoring controls.** The resolved hierarchical identifier. Use this for state lookups and input identity comparisons, not `uid`.
 ---@field public _render_rect UguiRect? **Internal, only use when authoring controls.** The control's effective rectangle.
+---@field public _t_opacity number? **Internal, only use when authoring transitions.** Opacity override, clamped for rendering without mutating `opacity`.
+---@field public _t_tx number? **Internal, only use when authoring transitions.** Horizontal translation override.
+---@field public _t_ty number? **Internal, only use when authoring transitions.** Vertical translation override.
+---@field private _overflow_scrollbar boolean? Whether this is a fixed overflow scrollbar child.
 
 ---The base class for all controls.
 
@@ -4327,7 +5098,7 @@ end
 ---@field public text RichText The text displayed on the button.
 ---A button which can be clicked.
 
-local button_label_uid<const> = -1
+local button_label_uid<const> = -3
 
 ---@param control Button
 ---@param data any
@@ -4391,7 +5162,7 @@ end
 ---@field public is_checked boolean? Whether the button is checked. If nil, the ToggleButton is considered unchecked.
 ---A button which can be toggled on and off.
 
-local toggle_button_label_uid<const> = -1
+local toggle_button_label_uid<const> = -3
 
 ---@param control ToggleButton
 ---@param data any
@@ -4472,9 +5243,9 @@ end
 ---A button which can be toggled on and off.
 ---TODO: Make wraparound optional
 
-local carrousel_button_label_left_uid<const> = -1
-local carrousel_button_label_text_uid<const> = -2
-local carrousel_button_label_right_uid<const> = -3
+local carrousel_button_label_left_uid<const> = -3
+local carrousel_button_label_text_uid<const> = -4
+local carrousel_button_label_right_uid<const> = -5
 
 ---@param control CarrouselButton
 ---@param data any
@@ -4484,7 +5255,9 @@ local function carrousel_button_get_return_value(control, data)
     local rectangle = control._render_rect
 
     if ugui.internal.clicked_control == control._uid then
-        local relative_x = ugui.internal.environment.mouse_position.x - rectangle.x
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
+        local relative_x = mouse_position.x - rectangle.x
         if relative_x > rectangle.width / 2 then
             data.selected_index = data.selected_index + 1
             if data.selected_index > #control.items then
@@ -4595,6 +5368,7 @@ end
 ---@class ScrollBar : UguiControl
 ---@field public value number The scroll proportion in the range 0-1.
 ---@field public ratio number The overflow ratio, which is calculated by dividing the desired content dimensions by the relevant attached control's (e.g.: a listbox's) dimensions.
+---@field private _overflow_axis "x"|"y"? Fixed orientation for an automatic overflow scrollbar.
 ---A scrollbar which allows scrolling horizontally or vertically, depending on the control's dimensions.
 
 ---@param control ScrollBar
@@ -4604,21 +5378,25 @@ local function scrollbar_get_return_value(control, data)
     data.value = control.value
     local rectangle = control._render_rect
 
-    local is_horizontal = rectangle.width > rectangle.height
+    local is_horizontal = control._overflow_axis == 'x'
+        or (control._overflow_axis == nil and rectangle.width > rectangle.height)
 
     local thumb_size = is_horizontal
         and rectangle.width * control.ratio
         or rectangle.height * control.ratio
 
     if ugui.internal.clicked_control == control._uid and ugui.internal.environment.shift then
-        local mouse_pos = ugui.internal.environment.mouse_position
+        local mouse_pos = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
         local current_pos = is_horizontal and (mouse_pos.x - rectangle.x) or (mouse_pos.y - rectangle.y)
         local track_length = (is_horizontal and rectangle.width or rectangle.height) - thumb_size
         data.value = ugui.internal.clamp(current_pos / track_length, 0, 1)
     else
         if ugui.internal.mouse_captured_control == control._uid then
-            local mouse_pos = ugui.internal.environment.mouse_position
-            local mouse_down = ugui.internal.mouse_down_position
+            local mouse_pos = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+                or ugui.internal.environment.mouse_position
+            local mouse_down = ugui.internal.untransform_point(control, ugui.internal.mouse_down_position)
+                or ugui.internal.mouse_down_position
 
             if data.drag_offset == nil then
                 if is_horizontal then
@@ -4652,7 +5430,8 @@ end
 local scrollbar_draw = function(control)
     local data = ugui.internal.control_data[control._uid]
     local rectangle = control._render_rect
-    local is_horizontal = rectangle.width > rectangle.height
+    local is_horizontal = control._overflow_axis == 'x'
+        or (control._overflow_axis == nil and rectangle.width > rectangle.height)
 
     ---@type UguiRect
     local thumb_rectangle
@@ -4709,20 +5488,10 @@ end
 ---@field public selected_index integer? The index of the currently selected item into the items array. If `nil`, no item is selected.
 ---@field public horizontal_scroll boolean? Whether horizontal scrolling will be enabled when items go beyond the width of the control. Will impact performance greatly, use with care.
 ---A listbox which allows the user to choose from a list of items.
----If the items don't fit in the control's bounds vertically, vertical scrolling will be enabled.
----If the items don't fit in the control's bounds horizontally, horizontal scrolling will be enabled if horizontal_scroll is true.
----The `rectangle` field might be mutated to accommodate the scrollbars.
-
-local listbox_scrollbar_1_uid<const> = -1
-local listbox_scrollbar_2_uid<const> = -2
 
 local function initialize_listbox_data(control, data)
-    if data.scroll_x == nil then
-        data.scroll_x = 0
-    end
-    if data.scroll_y == nil then
-        data.scroll_y = 0
-    end
+    data.ugui_scroll_x = data.ugui_scroll_x or 0
+    data.ugui_scroll_y = data.ugui_scroll_y or 0
 end
 
 ---@param control ListBox
@@ -4731,38 +5500,15 @@ end
 local function listbox_get_return_value(control, data)
     data.selected_index = control.selected_index
 
-    local render_rect = control._render_rect
-    local rectangle = {
-        x = render_rect.x,
-        y = render_rect.y,
-        width = render_rect.width,
-        height = render_rect.height,
-    }
-    local content_bounds = ugui.standard_styler.get_desired_listbox_content_bounds(control)
-    local x_overflow = content_bounds.width > rectangle.width
-    local y_overflow = content_bounds.height > rectangle.height
+    local rectangle = ugui.internal.get_listbox_viewport(control)
+    local y_overflow = data.ugui_overflow_layout.show_y
 
-    if x_overflow then
-        rectangle.height = rectangle.height - ugui.standard_styler.params.scrollbar.thickness
-    end
-    if y_overflow then
-        rectangle.width = rectangle.width - ugui.standard_styler.params.scrollbar.thickness
-    end
-
-    local one_item_scroll_y<const> = 1 / #control.items
+    local one_item_scroll_y<const> = 1 / math.max(1, #control.items)
     local items_per_page<const> = math.floor(rectangle.height / ugui.standard_styler.params.listbox_item.height)
 
-    -- FIXME: This is pretty weird... we should have a mechanism at the ugui core level for this
-    local can_mouse_scroll = false
-    if ugui.internal.mouse_captured_control == nil then
-        can_mouse_scroll = ugui.internal.hovered_control == control._uid
-    end
-    if ugui.internal.mouse_captured_control == control._uid then
-        can_mouse_scroll = true
-    end
 
     local function index_from_y(y)
-        return math.ceil((y + (data.scroll_y *
+        return math.ceil((y + (data.ugui_scroll_y *
                 ((ugui.standard_styler.params.listbox_item.height * #control.items) - rectangle.height))) /
             ugui.standard_styler.params.listbox_item.height)
     end
@@ -4779,19 +5525,21 @@ local function listbox_get_return_value(control, data)
             return
         end
 
-        local scroll_offset_px = data.scroll_y * scroll_range
+        local scroll_offset_px = data.ugui_scroll_y * scroll_range
         local first_visible = math.floor(scroll_offset_px / item_height) + 1
         local last_visible = math.floor((scroll_offset_px + rectangle.height) / item_height)
 
         if data.selected_index < first_visible then
-            data.scroll_y = (data.selected_index - 1) * item_height / scroll_range
+            data.ugui_scroll_y = (data.selected_index - 1) * item_height / scroll_range
         elseif data.selected_index > last_visible then
-            data.scroll_y = (data.selected_index * item_height - rectangle.height) / scroll_range
+            data.ugui_scroll_y = (data.selected_index * item_height - rectangle.height) / scroll_range
         end
     end
 
     if ugui.internal.mouse_captured_control == control._uid then
-        local relative_y = ugui.internal.environment.mouse_position.y - rectangle.y
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
+        local relative_y = mouse_position.y - rectangle.y
         local new_index = index_from_y(relative_y)
         data.selected_index = new_index
 
@@ -4804,13 +5552,10 @@ local function listbox_get_return_value(control, data)
         end
         if overshoot ~= nil then
             overshoot = ugui.internal.clamp(overshoot, -50, 50)
-            data.scroll_y = data.scroll_y + one_item_scroll_y * ugui.internal.delta_time * overshoot * 2
+            data.ugui_scroll_y = data.ugui_scroll_y + one_item_scroll_y * ugui.internal.delta_time * overshoot * 2
         end
     end
 
-    if can_mouse_scroll then
-        data.scroll_y = data.scroll_y - ugui.internal.environment._scroll_delta.y * one_item_scroll_y
-    end
 
     if ugui.internal.keyboard_captured_control == control._uid then
         for i = 1, #ugui.internal.environment.key_events do
@@ -4852,9 +5597,9 @@ local function listbox_get_return_value(control, data)
         end
     end
 
-    data.scroll_y = ugui.internal.clamp(data.scroll_y, 0, 1)
+    data.ugui_scroll_y = ugui.internal.clamp(data.ugui_scroll_y, 0, 1)
     if not y_overflow then
-        data.scroll_y = 0
+        data.ugui_scroll_y = 0
     end
     if data.selected_index ~= nil then
         data.selected_index = ugui.internal.clamp(data.selected_index, 1, #control.items)
@@ -4874,6 +5619,13 @@ local listbox_draw = function(control)
     ugui.standard_styler.draw_listbox(control)
 end
 
+---@param control ListBox
+---@return UguiVector2
+local function listbox_measure(control)
+    local bounds = ugui.standard_styler.get_desired_listbox_content_bounds(control)
+    return {x = control.horizontal_scroll and bounds.width or 1, y = bounds.height}
+end
+
 ---Places a ListBox.
 ---@param control ListBox The control table.
 ---@param fn fun()? A callback whose placed controls become children of the listbox.
@@ -4885,55 +5637,10 @@ ugui.listbox = function(control, fn)
     ugui.internal.assert(type(control.horizontal_scroll) == 'nil' or type(control.horizontal_scroll) == 'boolean',
         'expected horizontal_scroll to be boolean or nil')
     control.draw = control.draw or listbox_draw
-    local content_bounds = ugui.standard_styler.get_desired_listbox_content_bounds(control)
-    local x_overflow = content_bounds.width > control.rectangle.width
-    local y_overflow = content_bounds.height > control.rectangle.height
-
-    -- If we need scrollbars, we shrink the control rectangle to accomodate them.
-    if x_overflow then
-        control.rectangle.height = control.rectangle.height - ugui.standard_styler.params.scrollbar.thickness
-    end
-    if y_overflow then
-        control.rectangle.width = control.rectangle.width - ugui.standard_styler.params.scrollbar.thickness
-    end
+    control.measure = control.measure or listbox_measure
 
     control.get_return_value = control.get_return_value or listbox_get_return_value
     local result = ugui.internal.control(control, 'listbox', fn, initialize_listbox_data)
-    local data = ugui.internal.control_data[control._uid]
-
-    if x_overflow then
-        data.scroll_x = ugui.scrollbar({
-            uid = ugui.internal.child_uid(control, listbox_scrollbar_1_uid),
-            is_enabled = ugui.internal.is_control_enabled(control),
-            opacity = control.opacity,
-            rectangle = {
-                x = control.rectangle.x,
-                y = control.rectangle.y + control.rectangle.height,
-                width = control.rectangle.width,
-                height = ugui.standard_styler.params.scrollbar.thickness,
-            },
-            value = data.scroll_x,
-            ratio = 1 / (content_bounds.width / control.rectangle.width),
-            z_index = control.z_index,
-        })
-    end
-
-    if y_overflow then
-        data.scroll_y = ugui.scrollbar({
-            uid = ugui.internal.child_uid(control, listbox_scrollbar_2_uid),
-            is_enabled = ugui.internal.is_control_enabled(control),
-            opacity = control.opacity,
-            rectangle = {
-                x = control.rectangle.x + control.rectangle.width,
-                y = control.rectangle.y,
-                width = ugui.standard_styler.params.scrollbar.thickness,
-                height = control.rectangle.height,
-            },
-            value = data.scroll_y,
-            ratio = 1 / (content_bounds.height / control.rectangle.height),
-            z_index = control.z_index,
-        })
-    end
 
     return result.primary, result.meta
 end
@@ -5038,8 +5745,10 @@ local function textbox_get_return_value(control, data)
     local clicked<const> = ugui.internal.clicked_control == control._uid
     local double_clicked<const> = ugui.internal.doubleclicked_control == control._uid
     local triple_clicked<const> = ugui.internal.tripleclicked_control == control._uid
-    local mouse_position<const> = ugui.internal.environment.mouse_position
-    local mouse_down_position<const> = ugui.internal.mouse_down_position
+    local mouse_position<const> = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+        or ugui.internal.environment.mouse_position
+    local mouse_down_position<const> = ugui.internal.untransform_point(control, ugui.internal.mouse_down_position)
+        or ugui.internal.mouse_down_position
     local mouse_moved_since_press<const> = mouse_position.x ~= mouse_down_position.x or
         mouse_position.y ~= mouse_down_position.y
     local dragging<const> = ugui.internal.mouse_captured_control == control._uid and mouse_moved_since_press and
@@ -5481,11 +6190,11 @@ end
 ---@field public preview_change boolean? Whether the returned selected index can change while the combobox is open.
 ---A combobox which allows the user to choose from a list of items.
 
-local combobox_textbox_uid<const> = -1
-local combobox_button_uid<const> = -2
-local combobox_listbox_uid<const> = -3
-local combobox_label_text_uid<const> = -4
-local combobox_label_icon_uid<const> = -5
+local combobox_textbox_uid<const> = -3
+local combobox_button_uid<const> = -4
+local combobox_listbox_uid<const> = -5
+local combobox_label_text_uid<const> = -6
+local combobox_label_icon_uid<const> = -7
 
 local function initialize_combobox_data(control, data)
     data.open = false
@@ -5618,6 +6327,11 @@ ugui.combobox = function(control, fn)
             },
             is_enabled = ugui.internal.is_control_enabled(control),
             opacity = control.opacity,
+            in_transition = control.in_transition,
+            out_transition = control.out_transition,
+            transition = control.transition,
+            tx = control.tx,
+            ty = control.ty,
             text = current_text,
         })
 
@@ -5631,6 +6345,11 @@ ugui.combobox = function(control, fn)
                 },
                 is_enabled = ugui.internal.is_control_enabled(control),
                 opacity = control.opacity,
+                in_transition = control.in_transition,
+                out_transition = control.out_transition,
+                transition = control.transition,
+                tx = control.tx,
+                ty = control.ty,
                 text = data.open and '[icon:arrow_up]' or '[icon:arrow_down]',
             }) then
             data.open = not data.open
@@ -5783,11 +6502,13 @@ local function joystick_get_return_value(control, data)
     local rectangle = control._render_rect
 
     if ugui.internal.mouse_captured_control == control._uid then
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
         data.position.x = ugui.internal.clamp(
-            ugui.internal.remap(ugui.internal.environment.mouse_position.x - rectangle.x, 0,
+            ugui.internal.remap(mouse_position.x - rectangle.x, 0,
                 rectangle.width, -128, 128), -128, 128)
         data.position.y = ugui.internal.clamp(
-            ugui.internal.remap(ugui.internal.environment.mouse_position.y - rectangle.y, 0,
+            ugui.internal.remap(mouse_position.y - rectangle.y, 0,
                 rectangle.height, -128, 128), -128, 128)
         if control.x_snap and data.position.x > -control.x_snap and data.position.x < control.x_snap then
             data.position.x = 0
@@ -5929,7 +6650,8 @@ local function colorpicker_get_return_value(control, data)
 
     local selection_changed = false
     if ugui.internal.clicked_control == control._uid then
-        local mouse_down_position = ugui.internal.mouse_down_position
+        local mouse_down_position = ugui.internal.untransform_point(control, ugui.internal.mouse_down_position)
+            or ugui.internal.mouse_down_position
         if shape == 'circle' then
             if square.width > 0 and ugui.internal.point_in_circle(mouse_down_position, square) then
                 data.drag_mode = 'circle'
@@ -5948,7 +6670,8 @@ local function colorpicker_get_return_value(control, data)
     end
 
     if ugui.internal.mouse_captured_control == control._uid then
-        local mouse_position = ugui.internal.environment.mouse_position
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
         if data.drag_mode == 'circle' and square.width > 0 then
             local center_x = square.x + square.width / 2
             local center_y = square.y + square.height / 2
@@ -5991,7 +6714,8 @@ local function colorpicker_get_return_value(control, data)
         data.drag_mode = nil
     end
 
-    local mouse_position = ugui.internal.environment.mouse_position
+    local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+        or ugui.internal.environment.mouse_position
     local circle_is_active = shape == 'circle' and (
         ugui.internal.mouse_captured_control == control._uid and data.drag_mode == 'circle' or
         ugui.internal.mouse_captured_control ~= control._uid and ugui.internal.hovered_control == control._uid and
@@ -6200,10 +6924,12 @@ local function trackbar_get_return_value(control, data)
     local rectangle = control._render_rect
 
     if ugui.internal.mouse_captured_control == control._uid then
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
         if rectangle.width > rectangle.height then
-            data.value = (ugui.internal.environment.mouse_position.x - rectangle.x) / rectangle.width
+            data.value = (mouse_position.x - rectangle.x) / rectangle.width
         else
-            data.value = (ugui.internal.environment.mouse_position.y - rectangle.y) / rectangle.height
+            data.value = (mouse_position.y - rectangle.y) / rectangle.height
         end
     end
 
@@ -6353,7 +7079,8 @@ local function menu_get_return_value(control, data)
     data.hovered_path = data.hovered_path or {}
     local result = {item = nil, dismissed = false}
     local visible_menus = menu_get_visible(control, data.hovered_path)
-    local mouse_position = ugui.internal.environment.mouse_position
+    local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+        or ugui.internal.environment.mouse_position
 
     if data.dismissed == 2 then
         data.dismissed = 0
@@ -6362,7 +7089,8 @@ local function menu_get_return_value(control, data)
         data.dismissed = 2
     end
 
-    local mouse_down_position = ugui.internal.mouse_down_position
+    local mouse_down_position = ugui.internal.untransform_point(control, ugui.internal.mouse_down_position)
+        or ugui.internal.mouse_down_position
     if ugui.internal.is_mouse_just_down() then
         local inside_menu = false
         for i = 1, #visible_menus do
@@ -6472,7 +7200,7 @@ end
 ---@field public selected_index integer The index of the selected tab.
 ---@field public rectangle UguiRect The visual bounds the selected tab can place its contents in.
 
-local tabcontrol_content_panel_uid<const> = -1
+local tabcontrol_content_panel_uid<const> = -3
 
 local function initialize_tabcontrol_data(control, data)
     data.scroll_x = 0
@@ -6501,7 +7229,7 @@ ugui.tabcontrol = function(control, fn)
     ugui.internal.assert(type(control.selected_index) == 'number', 'expected selected_index to be number')
     local selected_index = control.selected_index
     local content_rectangle
-    local current_uid = -2
+    local current_uid = -4
 
     control.get_return_value = control.get_return_value or tabcontrol_get_return_value
     ugui.internal.control(control, 'tabcontrol', function()
@@ -6601,7 +7329,7 @@ end
 ---@field public show_negative boolean? Whether a button for viewing and toggling the value's sign is shown. If nil, false is assumed.
 ---A numberbox, which allows modifying a number by typing or by adjusting its individual digits.
 
-local numberbox_button_1_uid<const> = -1
+local numberbox_button_1_uid<const> = -3
 
 local function initialize_numberbox_data(control, data)
     data.caret_index = 1
@@ -6651,8 +7379,9 @@ local function numberbox_get_return_value(control, data)
     end
 
     if ugui.internal.clicked_control == control._uid then
-        data.caret_index = get_caret_index_at_relative_x(ugui.internal.environment.mouse_position.x -
-            rectangle.x)
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
+        data.caret_index = get_caret_index_at_relative_x(mouse_position.x - rectangle.x)
     end
 
     if ugui.internal.keyboard_captured_control == control._uid then
@@ -6819,6 +7548,11 @@ ugui.numberbox = function(control, fn)
                 uid = ugui.internal.child_uid(control, numberbox_button_1_uid),
                 is_enabled = ugui.internal.is_control_enabled(control),
                 opacity = control.opacity,
+                in_transition = control.in_transition,
+                out_transition = control.out_transition,
+                transition = control.transition,
+                tx = control.tx,
+                ty = control.ty,
                 rectangle = {
                     x = control.rectangle.x - negative_button_size,
                     y = control.rectangle.y,
@@ -6853,9 +7587,9 @@ end
 ---@field public is_horizontal boolean? Whether the increment buttons are stacked horizontally.
 ---A spinner, consisting of a textbox and buttons for incrementing or decrementing a number.
 
-local spinner_textbox_uid<const> = -1
-local spinner_button_1_uid<const> = -2
-local spinner_button_2_uid<const> = -3
+local spinner_textbox_uid<const> = -3
+local spinner_button_1_uid<const> = -4
+local spinner_button_2_uid<const> = -5
 
 local function initialize_spinner_data(control, data)
     data.value = control.value or 0
@@ -6939,8 +7673,10 @@ ugui.spinner = function(control, fn)
             value = clamp_value(new_number)
         end
 
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
         if ugui.internal.is_control_enabled(control)
-            and (ugui.internal.point_in_rect(ugui.internal.environment.mouse_position, textbox_render_rect)
+            and (ugui.internal.point_in_rect(mouse_position, textbox_render_rect)
                 or ugui.internal.mouse_captured_control == ugui.internal.child_uid(control, spinner_textbox_uid))
         then
             if ugui.internal.environment._scroll_delta.y ~= 0 then
@@ -7059,14 +7795,14 @@ end
 ---@field public maximized boolean? Whether the maximize button was pressed.
 ---@field public closed boolean? Whether the close button was pressed.
 
-local window_titlebar_panel_uid<const> = -1
-local window_content_panel_uid<const> = -2
-local window_title_uid<const> = -3
-local window_minimize_button_uid<const> = -4
-local window_maximize_button_uid<const> = -5
-local window_close_button_uid<const> = -6
-local window_resize_handle_uid<const> = -7
-local window_drag_grip_uid<const> = -8
+local window_titlebar_panel_uid<const> = -3
+local window_content_panel_uid<const> = -4
+local window_title_uid<const> = -5
+local window_minimize_button_uid<const> = -6
+local window_maximize_button_uid<const> = -7
+local window_close_button_uid<const> = -8
+local window_resize_handle_uid<const> = -9
+local window_drag_grip_uid<const> = -10
 
 local function window_draw_rotated_title(control, angle)
     local rectangle = control._render_rect
@@ -7300,13 +8036,12 @@ ugui.window = function(control, fn)
     if dragging then
         if not data.drag_start_position then
             data.drag_start_position = {x = control.rectangle.x, y = control.rectangle.y}
-            data.drag_start_mouse_position = {
-                x = ugui.internal.mouse_down_position.x,
-                y = ugui.internal.mouse_down_position.y,
-            }
+            data.drag_start_mouse_position = ugui.internal.untransform_point(control,
+                ugui.internal.mouse_down_position, true) or ugui.internal.mouse_down_position
         end
 
-        local mouse_position = ugui.internal.environment.mouse_position
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position, true)
+            or ugui.internal.environment.mouse_position
         local delta_x = mouse_position.x - data.drag_start_mouse_position.x
         local delta_y = mouse_position.y - data.drag_start_mouse_position.y
         if delta_x ~= 0 or delta_y ~= 0 then
@@ -7333,13 +8068,12 @@ ugui.window = function(control, fn)
     if resizing then
         if not data.resize_start_size then
             data.resize_start_size = {x = rectangle.width, y = rectangle.height}
-            data.resize_start_mouse_position = {
-                x = ugui.internal.mouse_down_position.x,
-                y = ugui.internal.mouse_down_position.y,
-            }
+            data.resize_start_mouse_position = ugui.internal.untransform_point(control,
+                ugui.internal.mouse_down_position) or ugui.internal.mouse_down_position
         end
 
-        local mouse_position = ugui.internal.environment.mouse_position
+        local mouse_position = ugui.internal.untransform_point(control, ugui.internal.environment.mouse_position)
+            or ugui.internal.environment.mouse_position
         local delta_x = mouse_position.x - data.resize_start_mouse_position.x
         local delta_y = mouse_position.y - data.resize_start_mouse_position.y
         if delta_x ~= 0 or delta_y ~= 0 then
