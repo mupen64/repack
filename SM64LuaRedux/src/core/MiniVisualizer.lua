@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 MiniVisualizer = {}
@@ -25,9 +25,9 @@ MiniVisualizer.draw = function()
         return
     end
     ugui.standard_styler.draw_raised_frame({
-        rectangle = grid_rect_abs(3, 14, 5, 2),
+        _render_rect = Drawing.map_rect(grid_rect_abs(3, 14, 5, 2)),
     }, ugui.visual_states.normal)
-    
+
     ugui.joystick({
         uid = UID.Joystick,
         rectangle = grid_rect_abs(0, 14, 3, 3),
@@ -74,29 +74,29 @@ MiniVisualizer.draw = function()
         rectangle = grid_rect_abs(3, 15, 5, 1),
         text = VarWatch_compute_value('action').value,
         color = foreground_color,
-        font_size = theme.font_size * Drawing.scale,
+        font_size = theme.font_size,
         font_name = 'Consolas',
-        align_x = BreitbandGraphics.alignment.center,
-        align_y = BreitbandGraphics.alignment.center,
+        align_x = ugui.alignment.center,
+        align_y = ugui.alignment.center,
     })
     ugui.label({
         uid = UID.JoystickX,
         rectangle = grid_rect_abs(3, 14, 2.5, 1),
         text = 'X: ' .. Joypad.input.X,
         color = foreground_color,
-        font_size = theme.font_size * Drawing.scale * 1.25,
+        font_size = theme.font_size * 1.25,
         font_name = 'Consolas',
-        align_x = BreitbandGraphics.alignment.center,
-        align_y = BreitbandGraphics.alignment.center,
+        align_x = ugui.alignment.center,
+        align_y = ugui.alignment.center,
     })
     ugui.label({
         uid = UID.JoystickY,
         rectangle = grid_rect_abs(5.5, 14, 2.5, 1),
         text = 'Y: ' .. Joypad.input.Y,
         color = foreground_color,
-        font_size = theme.font_size * Drawing.scale * 1.25,
+        font_size = theme.font_size * 1.25,
         font_name = 'Consolas',
-        align_x = BreitbandGraphics.alignment.center,
-        align_y = BreitbandGraphics.alignment.center,
+        align_x = ugui.alignment.center,
+        align_y = ugui.alignment.center,
     })
 end

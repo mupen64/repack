@@ -1,8 +1,8 @@
- 
+
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@diagnostic disable:invisible
@@ -19,7 +19,7 @@ local function playback_speed_mode()
 end
 
 function __impl.new(name, create_savestate)
-    local global_timer = Memory.current.mario_global_timer
+    local global_timer = Memory.current.global_timer
 
     local new_instance = {
         version = SEMANTIC_WORKFLOW_FILE_VERSION,
@@ -260,4 +260,3 @@ function __impl:set_base_sheet(sheet)
     self._base_sheet = sheet
     self._savestate = nil
 end
-

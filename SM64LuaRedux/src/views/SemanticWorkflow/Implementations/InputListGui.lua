@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@type InputListGui
@@ -62,7 +62,10 @@ local SCROLLBAR_WIDTH <const> = 0.3
 
 local MAX_DISPLAYED_SECTIONS <const> = 15
 
-local NUM_UIDS_PER_ROW <const> = 20
+local SECTION_UIDS_PER_ROW <const> = 12
+local INPUT_UIDS_PER_ROW <const> = 11
+local INPUT_ROW_UID_OFFSET <const> = SECTION_UIDS_PER_ROW
+local NUM_UIDS_PER_ROW <const> = SECTION_UIDS_PER_ROW + INPUT_UIDS_PER_ROW
 local BUTTON_COLORS <const> = {
     { background = '#0000FF64', button = '#0000BEFF' }, -- A
     { background = '#00B11664', button = '#00E62CFF' }, -- B
@@ -74,6 +77,7 @@ local BUTTON_COLORS <const> = {
 }
 
 --#endregion
+
 
 --#region logic
 
@@ -120,16 +124,17 @@ end
 local function interpolate_vectors_to_int(a, b, f)
     local result = {}
     for k, v in pairs(a) do
-        result[k] = math.floor(v + (b[k] - v) * f)
+        local target = b[k] or v
+        result[k] = math.floor(v + (target - v) * f)
     end
     return result
 end
 
 local function draw_headers(sheet, draw, button_draw_data)
     local background_color = interpolate_vectors_to_int(draw.background_color, { r = 127, g = 127, b = 127 }, 0.25)
-    BreitbandGraphics.fill_rectangle(grid_rect(0, ROW0, COL_BUTTONS_END, ROW2 - ROW0, 0), background_color)
+    BreitbandGraphics.fill_rectangle(Drawing.map_rect(grid_rect(0, ROW0, COL_BUTTONS_END, ROW2 - ROW0, 0)), background_color)
 
-    draw:text(grid_rect(3, ROW0, 1, 0.5), 'start', Locales.str('SEMANTIC_WORKFLOW_INPUTLIST_NAME'))
+    draw:text(grid_rect(3, ROW0, 1, 0.5), 'start', Locales.msg.SEMANTIC_WORKFLOW_INPUTLIST_NAME)
     sheet.name = ugui.textbox({
         uid = UID.SheetName,
         is_enabled = true,
@@ -153,7 +158,7 @@ end
 
 local function draw_scrollbar(num_rows)
     local baseline = grid_rect(COL_BUTTONS_END, ROW2, BUTTON_COLUMN_WIDTH, FRAME_COLUMN_HEIGHT, 0)
-    local unit = Settings.grid_size * Drawing.scale
+    local unit = Settings.grid_size
     local num_actually_shown_rows = math.min(MAX_DISPLAYED_SECTIONS, num_rows)
     local scrollbar_rect = {
         x = baseline.x - SCROLLBAR_WIDTH * unit,
@@ -194,7 +199,7 @@ local function draw_color_codes(baseline, scrollbar_rect, num_display_sections)
             i = i + 1
         end
         BreitbandGraphics.fill_rectangle(
-            { x = rect.x, y = rect.y, width = rect.width * amount, height = rect.height },
+            Drawing.map_rect({ x = rect.x, y = rect.y, width = rect.width * amount, height = rect.height }),
             BUTTON_COLORS[color_index].background
         )
         color_index = color_index + 1
@@ -215,18 +220,17 @@ end
 
 local placing = 0
 local function handle_scroll_and_buttons(section_rect, button_draw_data, num_rows)
-    local mouse_x = ugui_environment.mouse_position.x
-    local relative_y = ugui_environment.mouse_position.y - section_rect.y
+    local mouse_x = ugui.internal.environment.mouse_position.x
+    local relative_y = ugui.internal.environment.mouse_position.y - section_rect.y
     local in_range = mouse_x >= section_rect.x and mouse_x <= section_rect.x + section_rect.width and relative_y >= 0
     local unscrolled_hover_index = math.ceil(relative_y / section_rect.height)
     local hovering_index = unscrolled_hover_index + scroll_offset
     local any_change = false
     in_range = in_range and unscrolled_hover_index <= MAX_DISPLAYED_SECTIONS
-    update_scroll(in_range and ugui_environment.wheel or 0, num_rows)
+    update_scroll(in_range and ugui.internal.environment._scroll_delta.y or 0, num_rows)
     if in_range then
         -- act as if the mouse wheel was not moved in order to prevent other controls from scrolling on accident
-        ugui_environment.wheel = 0
-        ugui.internal.environment.wheel = 0
+        ugui.internal.environment._scroll_delta.y = 0
     end
 
     if not button_draw_data then return end
@@ -310,7 +314,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
 
         if row_count > MAX_DISPLAYED_SECTIONS + scroll_offset then
             local extra_sections = #sheet.sections - section_index
-            BreitbandGraphics.fill_rectangle(span(0, COL_BUTTONS_END), '#8A948A42')
+            BreitbandGraphics.fill_rectangle(Drawing.map_rect(span(0, COL_BUTTONS_END)), '#8A948A42')
             draw:text(span(COL_ARRANGEMENT_END, COL_BUTTONS_END), 'start', '+ ' .. extra_sections .. ' sections')
             return true
         end
@@ -318,14 +322,14 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
         local uid_base = UID.Row(row_count - scroll_offset)
         if not input then
             -- section header
-            BreitbandGraphics.fill_rectangle(span(0, COL_BUTTONS_END), Drawing.IsLightMode() and '#BABABA' or '#5F5F5F')
+            BreitbandGraphics.fill_rectangle(Drawing.map_rect(span(0, COL_BUTTONS_END)), Drawing.IsLightMode() and '#BABABA' or '#5F5F5F')
 
             section.collapsed = not ugui.toggle_button({
                 uid = uid_base + 0,
                 rectangle = span(COL_COLLAPSE_OR_PREVIEW_1, COL_COLLAPSE_OR_PREVIEW_END),
                 text = section.collapsed and '[icon:arrow_right]' or '[icon:arrow_down]',
-                tooltip = Locales.str(section.collapsed and 'SEMANTIC_WORKFLOW_INPUTS_EXPAND_SECTION' or
-                    'SEMANTIC_WORKFLOW_INPUTS_COLLAPSE_SECTION'),
+                tooltip = Locales.msg[section.collapsed and 'SEMANTIC_WORKFLOW_INPUTS_EXPAND_SECTION' or
+                    'SEMANTIC_WORKFLOW_INPUTS_COLLAPSE_SECTION'],
                 is_checked = not section.collapsed,
                 is_enabled = #section.inputs > 0,
             });
@@ -337,28 +341,28 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
             end
 
             if ugui.button({
-                uid = uid_base + 1,
+                uid = uid_base + 2,
                 rectangle = span(COL_ARRANGEMENT_2, COL_ARRANGEMENT_3),
                 text = '[icon:clone_up]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_PREPEND_SECTION_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_PREPEND_SECTION_TOOL_TIP
             }) then
                 queue_table_insert(sheet.sections, section, new_section(), 0)
             end
 
             if ugui.button({
-                uid = uid_base + 2,
+                uid = uid_base + 4,
                 rectangle = span(COL_ARRANGEMENT_3, COL_ARRANGEMENT_4),
                 text = '[icon:clone_down]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_APPEND_SECTION_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_APPEND_SECTION_TOOL_TIP
             }) then
                 queue_table_insert(sheet.sections, section, new_section(), 1)
             end
 
             if ugui.button({
-                uid = uid_base + 3,
+                uid = uid_base + 6,
                 rectangle = span(COL_ARRANGEMENT_4, COL_ARRANGEMENT_END),
                 text = '[icon:delete]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_DELETE_SECTION_TOOL_TIP"),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_DELETE_SECTION_TOOL_TIP,
                 is_enabled = #sheet.sections > 1
             }) then
                 queue_table_remove(sheet.sections, section)
@@ -366,10 +370,10 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
 
             local index = IndexOf(sheet.sections, section)
             if ugui.button({
-                uid = uid_base + 4,
+                uid = uid_base + 8,
                 rectangle = span(COL_ARRANGEMENT_END, COL_MERGE_SECTION_UP_END),
                 text = '[icon:merge_up]',
-                tooltip = Locales.str('SEMANTIC_WORKFLOW_INPUTS_MERGE_SECTION_UP_TOOL_TIP'),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_MERGE_SECTION_UP_TOOL_TIP,
                 is_enabled = index > 1
             }) then
                 local merge_into = sheet.sections[index - 1]
@@ -380,28 +384,28 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
             end
 
             section.name = ugui.textbox({
-                uid = uid_base + 5,
+                uid = uid_base + 10,
                 rectangle = span(COL_MERGE_SECTION_UP_END, COL_SECTION_NAME_END),
                 text = section.name or '',
             })
 
             ugui.label({
-                uid = uid_base + 6,
+                uid = uid_base + 11,
                 rectangle = span(COL_SECTION_NAME_END, COL_SECTION_LENGTH_END),
                 text = (SemanticWorkflowProject.current.measured_section_lengths[section] or '?') .. 'f',
                 color = ugui.standard_styler.params.textbox.text[1],
             })
         else
             -- input
-            BreitbandGraphics.fill_rectangle(section_rect, { r = shade, g = shade, b = shade * blue_multiplier, a = 66 })
+            BreitbandGraphics.fill_rectangle(Drawing.map_rect(section_rect), { r = shade, g = shade, b = shade * blue_multiplier, a = 66 })
 
             local tas_state = input.tas_state
 
             if ugui.button({
-                uid = uid_base + 10,
+                uid = uid_base + INPUT_ROW_UID_OFFSET,
                 rectangle = span(COL_COLLAPSE_OR_PREVIEW_1, COL_COLLAPSE_OR_PREVIEW_END),
                 text = '[icon:next_page]',
-                tooltip = Locales.str('SEMANTIC_WORKFLOW_INPUTS_RUN_TO_INPUT_TOOL_TIP'),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_RUN_TO_INPUT_TOOL_TIP,
             }) then
                 sheet.preview_input = { section_index = section_index, input_index = input_index }
                 sheet:run_to_preview()
@@ -409,28 +413,28 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
 
 
             if ugui.button({
-                uid = uid_base + 11,
+                uid = uid_base + INPUT_ROW_UID_OFFSET + 2,
                 rectangle = span(COL_ARRANGEMENT_2, COL_ARRANGEMENT_3),
                 text = '[icon:clone_up]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_PREPEND_INPUT_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_PREPEND_INPUT_TOOL_TIP
             }) then
                 queue_table_insert(section.inputs, input, ugui.internal.deep_clone(input), 0, section)
             end
 
             if ugui.button({
-                uid = uid_base + 12,
+                uid = uid_base + INPUT_ROW_UID_OFFSET + 4,
                 rectangle = span(COL_ARRANGEMENT_3, COL_ARRANGEMENT_4),
                 text = '[icon:clone_down]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_APPEND_INPUT_TOOL_TIP")
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_APPEND_INPUT_TOOL_TIP
             }) then
                 queue_table_insert(section.inputs, input, ugui.internal.deep_clone(input), 1, section)
             end
 
             if ugui.button({
-                uid = uid_base + 13,
+                uid = uid_base + INPUT_ROW_UID_OFFSET + 6,
                 rectangle = span(COL_ARRANGEMENT_4, COL_ARRANGEMENT_END),
                 text = '[icon:delete]',
-                tooltip = Locales.str("SEMANTIC_WORKFLOW_INPUTS_DELETE_INPUT_TOOL_TIP"),
+                tooltip = Locales.msg.SEMANTIC_WORKFLOW_INPUTS_DELETE_INPUT_TOOL_TIP,
                 is_enabled = #section.inputs > 1
             }) then
                 queue_table_remove(section.inputs, input, section)
@@ -438,12 +442,12 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
 
             local termination_tool_tip =
                 (input.end_action ~= 0
-                    and Locales.str('SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_1')
+                    and Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_1
                         .. Locales.action(input.end_action) .. '\n'
                     or ''
-                ) .. Locales.str('SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_2') .. input.timeout
+                ) .. Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_2 .. input.timeout
             if ugui.button({
-                uid = uid_base + 14,
+                uid = uid_base + INPUT_ROW_UID_OFFSET + 8,
                 rectangle = span(COL_TERMINATION_1, COL_TERMINATION_END),
                 text = input.end_action ~= 0 and '[icon:action]' or input.timeout < 100 and '' .. input.timeout or '99+',
                 tooltip = termination_tool_tip,
@@ -455,18 +459,18 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
 
             -- mini joysticks and yaw numbers
             local joystick_box = span(COL_JOYSTICK_1, COL_JOYSTICK_2)
-            local mixin = { joystick = { tip_size = 4 * Drawing.scale } }
+            local mixin = { joystick = { tip_size = 4 } }
             if input.editing then
                 mixin.joystick.back = { [1] = '#00C80064' }
             end
             ugui.joystick({
-                uid = uid_base + 15,
+                uid = uid_base + INPUT_ROW_UID_OFFSET + 10,
                 rectangle = span(COL_JOYSTICK_1, COL_JOYSTICK_2, FRAME_COLUMN_HEIGHT),
                 position = { x = input.joy.X, y = -input.joy.Y },
                 styler_mixin = mixin,
             })
 
-            if BreitbandGraphics.is_point_inside_rectangle(ugui_environment.mouse_position, joystick_box) then
+            if BreitbandGraphics.is_point_inside_rectangle(ugui.internal.environment.mouse_position, joystick_box) then
                 if ugui.internal.is_mouse_just_down() and not G_KEYS['control'] then
                     for _, section in pairs(sheet.sections) do
                         for _, input in pairs(section.inputs) do
@@ -489,7 +493,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                     tas_state.strain_left and '<' or (tas_state.strain_right and '>' or '-'))
             end
 
-            if BreitbandGraphics.is_point_inside_rectangle(ugui_environment.mouse_position, active_input_box) then
+            if BreitbandGraphics.is_point_inside_rectangle(ugui.internal.environment.mouse_position, active_input_box) then
                 if ugui.internal.is_mouse_just_down() then
                     if __impl.special_select_handler then
                         __impl.special_select_handler({ section_index = section_index, input_index = input_index })
@@ -500,7 +504,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
             end
 
             -- draw buttons
-            local unit = Settings.grid_size * Drawing.scale
+            local unit = Settings.grid_size
             local sz = BUTTON_SIZE * unit
             local rect = {
                 x = 0,
@@ -511,9 +515,9 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
             for button_index, v in ipairs(BUTTONS) do
                 rect.x = button_draw_data[button_index].x + unit * (BUTTON_COLUMN_WIDTH - BUTTON_SIZE) * 0.5
                 if input.joy[v.input] then
-                    BreitbandGraphics.fill_ellipse(rect, BUTTON_COLORS[button_draw_data[button_index].color_index].button)
+                    BreitbandGraphics.fill_ellipse(Drawing.map_rect(rect), BUTTON_COLORS[button_draw_data[button_index].color_index].button)
                 end
-                BreitbandGraphics.draw_ellipse(rect, input.joy[v.input] and '#000000FF' or '#00000050', 1)
+                BreitbandGraphics.draw_ellipse(Drawing.map_rect(rect), input.joy[v.input] and '#000000FF' or '#00000050', 1)
             end
 
             local active = sheet.active_input
@@ -521,19 +525,19 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                 and section.inputs[active.input_index]
                 and section.inputs[active.input_index].loop
                 and section.inputs[active.input_index].loop.jump_target == input_index then
-                BreitbandGraphics.draw_rectangle(section_rect, '#FF8000FF', 2)
+                BreitbandGraphics.draw_rectangle(Drawing.map_rect(section_rect), '#FF8000FF', 2)
             end
 
             if input.loop then
-                BreitbandGraphics.draw_rectangle(section_rect, '#0064FFFF', 2)
+                BreitbandGraphics.draw_rectangle(Drawing.map_rect(section_rect), '#0064FFFF', 2)
             end
 
             if section_index == sheet.preview_input.section_index and sheet.preview_input.input_index == input_index then
-                BreitbandGraphics.draw_rectangle(section_rect, '#FF0000FF', 1)
+                BreitbandGraphics.draw_rectangle(Drawing.map_rect(section_rect), '#FF0000FF', 1)
             end
 
             if section_index == sheet.active_input.section_index and sheet.active_input.input_index == input_index then
-                BreitbandGraphics.draw_rectangle(section_rect, '#64FF64FF', 1)
+                BreitbandGraphics.draw_rectangle(Drawing.map_rect(section_rect), '#64FF64FF', 1)
             end
         end
 

@@ -1,14 +1,14 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 ---@type PreferencesTab
 ---@diagnostic disable-next-line: assign-type-mismatch
 local __impl = __impl
 
-__impl.name = function() return Locales.str('SEMANTIC_WORKFLOW_PREFERENCES_TAB_NAME') end
+__impl.name = function() return Locales.msg.SEMANTIC_WORKFLOW_PREFERENCES_TAB_NAME end
 __impl.help_key = 'PREFERENCES_TAB'
 
 ---@type Gui
@@ -18,7 +18,7 @@ local UID = UIDProvider.allocate_once('PreferencesTab', function(enum_next)
     return {
         ToggleEditEntireState = enum_next(),
         ToggleFastForward = enum_next(),
-        DefaultSectionTimeout = enum_next(2),
+        DefaultSectionTimeout = enum_next(),
     }
 end)
 
@@ -28,7 +28,7 @@ function __impl.render(draw)
         {
             uid = UID.ToggleEditEntireState,
             rectangle = grid_rect(0, top, 8, Gui.MEDIUM_CONTROL_HEIGHT),
-            text = Locales.str('SEMANTIC_WORKFLOW_PREFERENCES_EDIT_ENTIRE_STATE'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_PREFERENCES_EDIT_ENTIRE_STATE,
             is_checked = Settings.semantic_workflow.edit_entire_state,
         }
     )
@@ -36,7 +36,7 @@ function __impl.render(draw)
         {
             uid = UID.ToggleFastForward,
             rectangle = grid_rect(0, top + Gui.MEDIUM_CONTROL_HEIGHT, 8, Gui.MEDIUM_CONTROL_HEIGHT),
-            text = Locales.str('SEMANTIC_WORKFLOW_PREFERENCES_FAST_FORWARD'),
+            text = Locales.msg.SEMANTIC_WORKFLOW_PREFERENCES_FAST_FORWARD,
             is_checked = Settings.semantic_workflow.fast_foward,
         }
     )
@@ -44,7 +44,7 @@ function __impl.render(draw)
     draw:text(
         grid_rect(2, top + Gui.MEDIUM_CONTROL_HEIGHT * 2, 4, Gui.MEDIUM_CONTROL_HEIGHT),
         'end',
-        Locales.str('SEMANTIC_WORKFLOW_PREFERENCES_DEFAULT_SECTION_TIMEOUT')
+        Locales.msg.SEMANTIC_WORKFLOW_PREFERENCES_DEFAULT_SECTION_TIMEOUT
     )
     Settings.semantic_workflow.default_section_timeout = math.max(
         ugui.numberbox(

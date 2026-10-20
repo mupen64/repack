@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 dofile(views_path .. 'SemanticWorkflow/Version.lua')
@@ -89,22 +89,33 @@ SemanticWorkflowDialog = nil
 
 local ugui_icon_draw = ugui.standard_styler.draw_icon
 
-local custom_icons = { 'navigate_back', 'arrow_up', 'arrow_down', 'base_sheet', 'without_save', 'delete',
-    'next_page', 'previous_page', 'duplicate', 'action', 'clone_up', 'clone_down', 'merge_up', 'loop'}
+local custom_icons = { 'navigate_back', 'base_sheet', 'without_save', 'delete',
+    'next_page', 'previous_page', 'duplicate', 'action', 'clone_up', 'clone_down', 'merge_up', 'loop' }
 
-ugui.standard_styler.draw_icon = function(rectangle, color, visual_state, key)
+ugui.standard_styler.draw_icon = function(rectangle, color, key)
     local postfix = Drawing.IsLightMode() and '' or '_light'
     for _, icon in ipairs(custom_icons) do
         if key == icon then
-            BreitbandGraphics.draw_image(rectangle, nil, views_path .. 'SemanticWorkflow/Resources/' .. key .. postfix .. '.png', color, 'linear')
+            BreitbandGraphics.draw_image2({
+                path = views_path .. 'SemanticWorkflow/Resources/' .. key .. postfix .. '.png',
+                destx1 = rectangle.x,
+                desty1 = rectangle.y,
+                destx2 = rectangle.x + rectangle.width,
+                desty2 = rectangle.y + rectangle.height,
+                color = "#FFFFFF",
+                interpolation = 1,
+            })
             return
         end
     end
-    ugui_icon_draw(rectangle, color, visual_state, key)
+    ugui_icon_draw(rectangle, color, key)
 end
 
 local Tabs = dofile(views_path .. 'SemanticWorkflow/Tabs.lua')
 local selected_tab_index = 1
+local previous_tab_index = selected_tab_index
+local tab_transition_x = 10
+local tab_out_transition = ugui.transition.fly({ x = -10, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
 
 local function draw_factory(theme)
     local uid_counter = 0
@@ -117,7 +128,7 @@ local function draw_factory(theme)
     return {
         foreground_color = Drawing.foreground_color(),
         background_color = theme.background_color,
-        font_size = theme.font_size * Drawing.scale * 0.75,
+        font_size = theme.font_size * 0.75,
 
         text = function(self, rect, horizontal_alignment, text)
             ugui.label({
@@ -127,8 +138,8 @@ local function draw_factory(theme)
                 color = self.foreground_color,
                 font_size = self.font_size,
                 font_name = 'Consolas',
-                align_x = BreitbandGraphics.alignment[horizontal_alignment],
-                align_y = BreitbandGraphics.alignment.center,
+                align_x = ugui.alignment[horizontal_alignment],
+                align_y = ugui.alignment.center,
             })
         end,
 
@@ -140,8 +151,8 @@ local function draw_factory(theme)
                 color = self.foreground_color,
                 font_size = self.font_size * 0.75,
                 font_name = 'Consolas',
-                align_x = BreitbandGraphics.alignment[horizontal_alignment],
-                align_y = BreitbandGraphics.alignment.center,
+                align_x = ugui.alignment[horizontal_alignment],
+                align_y = ugui.alignment.center,
             })
         end,
     }
@@ -158,7 +169,7 @@ function CurrentSemanticWorkflowOverride()
 end
 
 return {
-    name = function() return Locales.str('SEMANTIC_WORKFLOW_TAB_NAME') end,
+    name = function() return Locales.msg.SEMANTIC_WORKFLOW_TAB_NAME end,
     draw = function()
         -- if we're showing any dialog, stop rendering anything else
         if SemanticWorkflowDialog ~= nil then
@@ -175,9 +186,11 @@ return {
             -- show only the project page if no project was loaded
             selected_tab_index = 1
         end
+
+        local select_tab_uid = project_loaded and UID.SelectTabProjectLoaded or UID.SelectTab
         -- TODO: consider respecting valid bounding 'rectangle' result from this control
         selected_tab_index = ugui.tabcontrol({
-            uid = UID.SelectTab,
+            uid = select_tab_uid,
             rectangle = grid_rect(0, 0, 6, 1),
             items = project_loaded and lualinq.select(Tabs, function(e) return e.name() end) or { Tabs[1].name() },
             selected_index = selected_tab_index,
@@ -190,23 +203,35 @@ return {
                     uid = UID.ToggleHelp,
                     rectangle = grid_rect(7, 0, 1, 1),
                     text = '?',
-                    tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_SHOW_TOOL_TIP'),
+                    tooltip = Locales.msg.SEMANTIC_WORKFLOW_HELP_SHOW_TOOL_TIP,
                     is_enabled = Tabs[selected_tab_index].help_key ~= nil,
                 }
             ) then
             SemanticWorkflowDialog = Help.GetDialog(Tabs[selected_tab_index].help_key)
         end
 
-        Tabs[selected_tab_index].render(draw)
+        if selected_tab_index ~= previous_tab_index then
+            tab_transition_x = selected_tab_index > previous_tab_index and 10 or -10
+            tab_out_transition.tick = ugui.transition.fly({ x = -tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+            previous_tab_index = selected_tab_index
+        end
+        tab_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+
+        ugui.panel({
+            uid = UID.TabPanels + selected_tab_index - 1,
+            rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
+            in_transition = ugui.transition.fly({ x = tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+            out_transition = tab_out_transition,
+        }, function()
+            Tabs[selected_tab_index].render(draw)
+        end)
 
         ugui.listbox({
             uid = UID.VarWatch,
             rectangle = grid_rect(-6, 10, 6, 7),
             selected_index = nil,
             items = VarWatch.processed_values,
-            styler_mixin = {
-                color_filter = { r = 255, g = 255, b = 255, a = 110 },
-            },
+            opacity = 0.8
         })
     end,
 }

@@ -1,5 +1,5 @@
 --
--- Copyright (c) 2026, Mupen64 maintainers, contributors, and original authors (Hacktarux, ShadowPrince, linker).
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
 -- SPDX-License-Identifier: GPL-2.0-or-later
 --
@@ -10,7 +10,7 @@ emu = {}
 memory = {}
 debugger = {}
 wgui = {}
-d2d = {}
+painter = {}
 input = {}
 joypad = {}
 movie = {}
@@ -22,10 +22,287 @@ action = {}
 clipboard = {}
 
 Mupen = {
-    _VERSION = '1.5.0',
+    _VERSION = '1.5.0-7',
     _URL = 'https://github.com/mupen64/mupen64-rr-lua',
     _DESCRIPTION = 'Mupen64 Lua Scripting API',
     _LICENSE = 'GPL-2',
+
+    ---@enum Keycode
+    ---SDL keycodes used by hotkeys and keyboard events.
+    keycode = {
+        SDLK_UNKNOWN = 0x00000000,
+        SDLK_RETURN = 0x0000000D,
+        SDLK_ESCAPE = 0x0000001B,
+        SDLK_BACKSPACE = 0x00000008,
+        SDLK_TAB = 0x00000009,
+        SDLK_SPACE = 0x00000020,
+        SDLK_DELETE = 0x0000007F,
+
+        SDLK_0 = 0x00000030,
+        SDLK_1 = 0x00000031,
+        SDLK_2 = 0x00000032,
+        SDLK_3 = 0x00000033,
+        SDLK_4 = 0x00000034,
+        SDLK_5 = 0x00000035,
+        SDLK_6 = 0x00000036,
+        SDLK_7 = 0x00000037,
+        SDLK_8 = 0x00000038,
+        SDLK_9 = 0x00000039,
+        SDLK_A = 0x00000061,
+        SDLK_B = 0x00000062,
+        SDLK_C = 0x00000063,
+        SDLK_D = 0x00000064,
+        SDLK_E = 0x00000065,
+        SDLK_F = 0x00000066,
+        SDLK_G = 0x00000067,
+        SDLK_H = 0x00000068,
+        SDLK_I = 0x00000069,
+        SDLK_J = 0x0000006A,
+        SDLK_K = 0x0000006B,
+        SDLK_L = 0x0000006C,
+        SDLK_M = 0x0000006D,
+        SDLK_N = 0x0000006E,
+        SDLK_O = 0x0000006F,
+        SDLK_P = 0x00000070,
+        SDLK_Q = 0x00000071,
+        SDLK_R = 0x00000072,
+        SDLK_S = 0x00000073,
+        SDLK_T = 0x00000074,
+        SDLK_U = 0x00000075,
+        SDLK_V = 0x00000076,
+        SDLK_W = 0x00000077,
+        SDLK_X = 0x00000078,
+        SDLK_Y = 0x00000079,
+        SDLK_Z = 0x0000007A,
+
+        SDLK_PLUS = 0x0000002B,
+        SDLK_COMMA = 0x0000002C,
+        SDLK_MINUS = 0x0000002D,
+        SDLK_PERIOD = 0x0000002E,
+        SDLK_SLASH = 0x0000002F,
+        SDLK_SEMICOLON = 0x0000003B,
+        SDLK_EQUALS = 0x0000003D,
+        SDLK_LEFTBRACKET = 0x0000005B,
+        SDLK_BACKSLASH = 0x0000005C,
+        SDLK_RIGHTBRACKET = 0x0000005D,
+        SDLK_GRAVE = 0x00000060,
+        SDLK_APOSTROPHE = 0x00000027,
+
+        SDLK_CAPSLOCK = 0x40000039,
+        SDLK_F1 = 0x4000003A,
+        SDLK_F2 = 0x4000003B,
+        SDLK_F3 = 0x4000003C,
+        SDLK_F4 = 0x4000003D,
+        SDLK_F5 = 0x4000003E,
+        SDLK_F6 = 0x4000003F,
+        SDLK_F7 = 0x40000040,
+        SDLK_F8 = 0x40000041,
+        SDLK_F9 = 0x40000042,
+        SDLK_F10 = 0x40000043,
+        SDLK_F11 = 0x40000044,
+        SDLK_F12 = 0x40000045,
+        SDLK_F13 = 0x40000068,
+        SDLK_F14 = 0x40000069,
+        SDLK_F15 = 0x4000006A,
+        SDLK_F16 = 0x4000006B,
+        SDLK_F17 = 0x4000006C,
+        SDLK_F18 = 0x4000006D,
+        SDLK_F19 = 0x4000006E,
+        SDLK_F20 = 0x4000006F,
+        SDLK_F21 = 0x40000070,
+        SDLK_F22 = 0x40000071,
+        SDLK_F23 = 0x40000072,
+        SDLK_F24 = 0x40000073,
+        SDLK_PRINTSCREEN = 0x40000046,
+        SDLK_SCROLLLOCK = 0x40000047,
+        SDLK_PAUSE = 0x40000048,
+        SDLK_INSERT = 0x40000049,
+        SDLK_HOME = 0x4000004A,
+        SDLK_PAGEUP = 0x4000004B,
+        SDLK_END = 0x4000004D,
+        SDLK_PAGEDOWN = 0x4000004E,
+        SDLK_RIGHT = 0x4000004F,
+        SDLK_LEFT = 0x40000050,
+        SDLK_DOWN = 0x40000051,
+        SDLK_UP = 0x40000052,
+
+        SDLK_NUMLOCKCLEAR = 0x40000053,
+        SDLK_KP_DIVIDE = 0x40000054,
+        SDLK_KP_MULTIPLY = 0x40000055,
+        SDLK_KP_MINUS = 0x40000056,
+        SDLK_KP_PLUS = 0x40000057,
+        SDLK_KP_ENTER = 0x40000058,
+        SDLK_KP_1 = 0x40000059,
+        SDLK_KP_2 = 0x4000005A,
+        SDLK_KP_3 = 0x4000005B,
+        SDLK_KP_4 = 0x4000005C,
+        SDLK_KP_5 = 0x4000005D,
+        SDLK_KP_6 = 0x4000005E,
+        SDLK_KP_7 = 0x4000005F,
+        SDLK_KP_8 = 0x40000060,
+        SDLK_KP_9 = 0x40000061,
+        SDLK_KP_0 = 0x40000062,
+        SDLK_KP_PERIOD = 0x40000063,
+        SDLK_APPLICATION = 0x40000065,
+        SDLK_KP_EQUALS = 0x40000067,
+
+        SDLK_LCTRL = 0x400000E0,
+        SDLK_LSHIFT = 0x400000E1,
+        SDLK_LALT = 0x400000E2,
+        SDLK_LGUI = 0x400000E3,
+        SDLK_RCTRL = 0x400000E4,
+        SDLK_RSHIFT = 0x400000E5,
+        SDLK_RALT = 0x400000E6,
+        SDLK_RGUI = 0x400000E7,
+        SDLK_SLEEP = 0x40000102,
+        SDLK_HELP = 0x40000075,
+        SDLK_MENU = 0x40000076,
+        SDLK_SELECT = 0x40000077,
+        SDLK_EXECUTE = 0x40000074,
+        SDLK_CLEAR = 0x4000009C,
+        SDLK_PRIOR = 0x4000009D,
+        SDLK_SEPARATOR = 0x4000009F,
+        SDLK_MUTE = 0x4000007F,
+        SDLK_VOLUMEUP = 0x40000080,
+        SDLK_VOLUMEDOWN = 0x40000081,
+
+        SDLK_EXCLAIM = 0x00000021,
+        SDLK_DBLAPOSTROPHE = 0x00000022,
+        SDLK_HASH = 0x00000023,
+        SDLK_DOLLAR = 0x00000024,
+        SDLK_PERCENT = 0x00000025,
+        SDLK_AMPERSAND = 0x00000026,
+        SDLK_LEFTPAREN = 0x00000028,
+        SDLK_RIGHTPAREN = 0x00000029,
+        SDLK_ASTERISK = 0x0000002A,
+        SDLK_COLON = 0x0000003A,
+        SDLK_LESS = 0x0000003C,
+        SDLK_GREATER = 0x0000003E,
+        SDLK_QUESTION = 0x0000003F,
+        SDLK_AT = 0x00000040,
+        SDLK_CARET = 0x0000005E,
+        SDLK_UNDERSCORE = 0x0000005F,
+        SDLK_LEFTBRACE = 0x0000007B,
+        SDLK_PIPE = 0x0000007C,
+        SDLK_RIGHTBRACE = 0x0000007D,
+        SDLK_TILDE = 0x0000007E,
+        SDLK_PLUSMINUS = 0x000000B1,
+        SDLK_POWER = 0x40000066,
+        SDLK_STOP = 0x40000078,
+        SDLK_AGAIN = 0x40000079,
+        SDLK_UNDO = 0x4000007A,
+        SDLK_CUT = 0x4000007B,
+        SDLK_COPY = 0x4000007C,
+        SDLK_PASTE = 0x4000007D,
+        SDLK_FIND = 0x4000007E,
+        SDLK_KP_COMMA = 0x40000085,
+        SDLK_KP_EQUALSAS400 = 0x40000086,
+        SDLK_ALTERASE = 0x40000099,
+        SDLK_SYSREQ = 0x4000009A,
+        SDLK_CANCEL = 0x4000009B,
+        SDLK_RETURN2 = 0x4000009E,
+        SDLK_OUT = 0x400000A0,
+        SDLK_OPER = 0x400000A1,
+        SDLK_CLEARAGAIN = 0x400000A2,
+        SDLK_CRSEL = 0x400000A3,
+        SDLK_EXSEL = 0x400000A4,
+        SDLK_KP_00 = 0x400000B0,
+        SDLK_KP_000 = 0x400000B1,
+        SDLK_THOUSANDSSEPARATOR = 0x400000B2,
+        SDLK_DECIMALSEPARATOR = 0x400000B3,
+        SDLK_CURRENCYUNIT = 0x400000B4,
+        SDLK_CURRENCYSUBUNIT = 0x400000B5,
+        SDLK_KP_LEFTPAREN = 0x400000B6,
+        SDLK_KP_RIGHTPAREN = 0x400000B7,
+        SDLK_KP_LEFTBRACE = 0x400000B8,
+        SDLK_KP_RIGHTBRACE = 0x400000B9,
+        SDLK_KP_TAB = 0x400000BA,
+        SDLK_KP_BACKSPACE = 0x400000BB,
+        SDLK_KP_A = 0x400000BC,
+        SDLK_KP_B = 0x400000BD,
+        SDLK_KP_C = 0x400000BE,
+        SDLK_KP_D = 0x400000BF,
+        SDLK_KP_E = 0x400000C0,
+        SDLK_KP_F = 0x400000C1,
+        SDLK_KP_XOR = 0x400000C2,
+        SDLK_KP_POWER = 0x400000C3,
+        SDLK_KP_PERCENT = 0x400000C4,
+        SDLK_KP_LESS = 0x400000C5,
+        SDLK_KP_GREATER = 0x400000C6,
+        SDLK_KP_AMPERSAND = 0x400000C7,
+        SDLK_KP_DBLAMPERSAND = 0x400000C8,
+        SDLK_KP_VERTICALBAR = 0x400000C9,
+        SDLK_KP_DBLVERTICALBAR = 0x400000CA,
+        SDLK_KP_COLON = 0x400000CB,
+        SDLK_KP_HASH = 0x400000CC,
+        SDLK_KP_SPACE = 0x400000CD,
+        SDLK_KP_AT = 0x400000CE,
+        SDLK_KP_EXCLAM = 0x400000CF,
+        SDLK_KP_MEMSTORE = 0x400000D0,
+        SDLK_KP_MEMRECALL = 0x400000D1,
+        SDLK_KP_MEMCLEAR = 0x400000D2,
+        SDLK_KP_MEMADD = 0x400000D3,
+        SDLK_KP_MEMSUBTRACT = 0x400000D4,
+        SDLK_KP_MEMMULTIPLY = 0x400000D5,
+        SDLK_KP_MEMDIVIDE = 0x400000D6,
+        SDLK_KP_PLUSMINUS = 0x400000D7,
+        SDLK_KP_CLEAR = 0x400000D8,
+        SDLK_KP_CLEARENTRY = 0x400000D9,
+        SDLK_KP_BINARY = 0x400000DA,
+        SDLK_KP_OCTAL = 0x400000DB,
+        SDLK_KP_DECIMAL = 0x400000DC,
+        SDLK_KP_HEXADECIMAL = 0x400000DD,
+        SDLK_MODE = 0x40000101,
+        SDLK_WAKE = 0x40000103,
+        SDLK_CHANNEL_INCREMENT = 0x40000104,
+        SDLK_CHANNEL_DECREMENT = 0x40000105,
+        SDLK_MEDIA_PLAY = 0x40000106,
+        SDLK_MEDIA_PAUSE = 0x40000107,
+        SDLK_MEDIA_RECORD = 0x40000108,
+        SDLK_MEDIA_FAST_FORWARD = 0x40000109,
+        SDLK_MEDIA_REWIND = 0x4000010A,
+        SDLK_MEDIA_NEXT_TRACK = 0x4000010B,
+        SDLK_MEDIA_PREVIOUS_TRACK = 0x4000010C,
+        SDLK_MEDIA_STOP = 0x4000010D,
+        SDLK_MEDIA_EJECT = 0x4000010E,
+        SDLK_MEDIA_PLAY_PAUSE = 0x4000010F,
+        SDLK_MEDIA_SELECT = 0x40000110,
+        SDLK_AC_NEW = 0x40000111,
+        SDLK_AC_OPEN = 0x40000112,
+        SDLK_AC_CLOSE = 0x40000113,
+        SDLK_AC_EXIT = 0x40000114,
+        SDLK_AC_SAVE = 0x40000115,
+        SDLK_AC_PRINT = 0x40000116,
+        SDLK_AC_PROPERTIES = 0x40000117,
+        SDLK_AC_SEARCH = 0x40000118,
+        SDLK_AC_HOME = 0x40000119,
+        SDLK_AC_BACK = 0x4000011A,
+        SDLK_AC_FORWARD = 0x4000011B,
+        SDLK_AC_STOP = 0x4000011C,
+        SDLK_AC_REFRESH = 0x4000011D,
+        SDLK_AC_BOOKMARKS = 0x4000011E,
+        SDLK_SOFTLEFT = 0x4000011F,
+        SDLK_SOFTRIGHT = 0x40000120,
+        SDLK_CALL = 0x40000121,
+        SDLK_ENDCALL = 0x40000122,
+        SDLK_LEFT_TAB = 0x20000001,
+        SDLK_LEVEL5_SHIFT = 0x20000002,
+        SDLK_MULTI_KEY_COMPOSE = 0x20000003,
+        SDLK_LMETA = 0x20000004,
+        SDLK_RMETA = 0x20000005,
+        SDLK_LHYPER = 0x20000006,
+        SDLK_RHYPER = 0x20000007,
+    },
+
+    ---@enum MouseButtonFlags
+    ---SDL mouse-button bitmasks.
+    mousebutton = {
+        SDL_BUTTON_LMASK = 0x01,
+        SDL_BUTTON_MMASK = 0x02,
+        SDL_BUTTON_RMASK = 0x04,
+        SDL_BUTTON_X1MASK = 0x08,
+        SDL_BUTTON_X2MASK = 0x10,
+    },
 
     ---@enum Result
     ---An enum containing results that can be returned by the core.
@@ -72,97 +349,95 @@ Mupen = {
         -- The movie's version is invalid
         vcr_invalid_version = 11,
 
-        -- The movie's extended version is invalid
-        vcr_invalid_extended_version = 12,
-
         -- The operation requires a playback or recording task
-        vcr_needs_playback_or_recording = 13,
+        vcr_needs_playback_or_recording = 12,
 
         -- The operation requires a playback task
-        vcr_needs_playback = 14,
+        vcr_needs_playback = 13,
 
         -- The provided start type is invalid
-        vcr_invalid_start_type = 15,
+        vcr_invalid_start_type = 14,
 
         -- Another warp modify operation is already running
-        vcr_warp_modify_already_running = 16,
+        vcr_warp_modify_already_running = 15,
 
         -- Warp modifications can only be performed during recording
-        vcr_warp_modify_needs_recording_task = 17,
+        vcr_warp_modify_needs_recording_task = 16,
 
         -- The provided input buffer is empty
-        vcr_warp_modify_empty_input_buffer = 18,
-
-        -- Another seek operation is already running
-        vcr_seek_already_running = 19,
+        vcr_warp_modify_empty_input_buffer = 17,
 
         -- The seek operation could not be initiated due to a savestate not being loaded successfully
-        vcr_seek_savestate_load_failed = 20,
+        vcr_seek_savestate_load_failed = 18,
 
         -- The seek operation can't be initiated because the seek savestate interval is 0
-        vcr_seek_savestate_interval_zero = 21,
+        vcr_seek_savestate_interval_zero = 19,
 
         -- The seek string is malformed
-        vcr_seek_string_malformed = 22,
+        vcr_seek_string_malformed = 20,
 
         -- VR
         -- ==========================================
 
         -- Couldn't find a rom matching the provided movie
-        vr_no_matching_rom = 23,
+        vr_no_matching_rom = 21,
 
         -- An error occured during plugin loading
-        vr_plugin_error = 24,
+        vr_plugin_error = 22,
 
         -- The ROM or alternative rom source is invalid
-        vr_rom_invalid = 25,
+        vr_rom_invalid = 23,
 
         -- The emulator isn't running yet
-        vr_not_running = 26,
+        vr_not_running = 24,
 
         -- Failed to open core streams
-        vr_file_open_failed = 27,
+        vr_file_open_failed = 25,
 
         -- Savestates
         -- ==========================================
 
         -- The core isn't launched
-        st_core_not_launched = 28,
+        st_core_not_launched = 26,
 
         -- The savestate file wasn't found
-        st_not_found = 29,
+        st_not_found = 27,
 
         -- The savestate couldn't be written to disk
-        st_file_write_error = 30,
+        st_file_write_error = 28,
 
         -- Couldn't decompress the savestate
-        st_decompression_error = 31,
+        st_decompression_error = 29,
 
         -- The event queue was too long
-        st_event_queue_too_long = 32,
+        st_event_queue_too_long = 30,
 
         -- The CPU registers contained invalid values
-        st_invalid_registers = 33,
+        st_invalid_registers = 31,
 
         -- Plugins
         -- ==========================================
 
         -- The plugin library couldn't be loaded
-        pl_load_library_failed = 34,
+        pl_load_library_failed = 32,
 
         -- The plugin doesn't export a GetDllInfo function
-        pl_no_get_dll_info = 35,
+        pl_no_get_dll_info = 33,
 
         -- Init
         -- ==========================================
 
         -- The core params are missing a critical component.
-        in_missing_component = 36,
+        in_missing_component = 34,
     },
 
+
+
+    ---@deprecated Use `Mupen.keycode` instead.
     ---@alias VKeycode integer
     ---A virtual keycode.
 
+    ---@deprecated Use `Mupen.keycode` instead.
     ---@enum VKeycodes
     -- A complete enum of Windows Virtual-Key codes.
     VKeycodes = {
@@ -407,7 +682,8 @@ Mupen = {
 ---@alias tostringusable string|number
 
 ---@class KeyEventArgs
----@field keycode VKeycode? The virtual keycode, if the event is a key event.
+---@field keycode VKeycode? The deprecated Windows virtual keycode, if the event is a key event.
+---@field keycode2 Keycode? The SDL keycode, if the event is a key event and the key has an SDL equivalent.
 ---@field ctrl boolean Whether the Ctrl key is held down.
 ---@field alt boolean Whether the Alt key is held down.
 ---@field shift boolean Whether the Shift key is held down.
@@ -430,6 +706,7 @@ Mupen = {
 ---@field button MouseButton? The mouse button that was pressed or released. If `nil`, the event is not related to a mouse button.
 ---@field pressed boolean? Whether the mouse button was pressed or released. Only present if `button ~= nil`.
 ---@field double_click boolean? Whether the event is a double-click event. Only present if `button ~= nil`.
+---@field triple_click boolean? Whether the event is a triple-click event. Only present if `button ~= nil`.
 
 ---@class CPUState
 ---@field opcode integer
@@ -467,6 +744,34 @@ function os.exit(code, close) end
 -- emu functions
 --#region
 
+---@alias MupenHint
+---| "restart_with_emu" -- Whether the script is closed when emulation stops, and automatically restarted when emulation restarts. Defaults to `1`. Can be `0` or `1`.
+
+---Gets the value of a hint.
+---@param hint MupenHint
+---@return string
+function emu.get_hint(hint) end
+
+---Sets a hint.
+---@param hint MupenHint
+---@param value string
+function emu.set_hint(hint, value) end
+
+---Gets the value of a user preference.
+---@param pref "theme"
+---@return "light"|"dark"
+function emu.get_pref(pref) end
+
+---Gets the value of a user preference.
+---@param pref "accent_color"
+---@return PainterColorTable
+function emu.get_pref(pref) end
+
+---Gets the value of a user preference.
+---@param pref "lang"
+---@return "en_US"|string
+function emu.get_pref(pref) end
+
 ---Displays the text `message` in the console. Similar to `print`, but only accepts strings or numbers.
 ---Also, `emu.console` does not insert a newline character.
 ---Because of this, `print` should be used instead.
@@ -489,26 +794,25 @@ function emu.statusbar(message) end
 ---@return nil
 function emu.atvi(f, unregister) end
 
----Similar to `emu.atvi`, but for wgui drawing commands.
----Only drawing functions from the wgui namespace will work here, those from d2d will not.
+---Similar to `emu.atvi`, but for `wgui` drawing commands.
+---Only drawing functions from the `wgui` namespace work here; painter commands do not.
 ---If `unregister` is set to true, the function `f` will no longer be called when this event occurs, but it will error if you never registered the function.
 ---@param f fun(): nil The function to be called after every VI frame.
 ---@param unregister boolean? If true, then unregister the function `f`.
 ---@return nil
 function emu.atupdatescreen(f, unregister) end
 
----Similar to `emu.atvi`, but for d2d and wgui drawing commands.
----Drawing functions from both the d2d and wgui namespaces will work here, but it's recommended to put wgui drawcalls into the `emu.atupdatescreen` callback for efficiency and compatibility reasons.
+---Calls `f` after every VI frame. Use [painter.current](lua://painter.current) to get the painter for the callback's scope.
+---The painter is only valid for the duration of the callback.
 ---If `unregister` is set to true, the function `f` will no longer be called when this event occurs, but it will error if you never registered the function.
 ---@param f fun(): nil The function to be called after every VI frame.
 ---@param unregister boolean? If true, then unregister the function `f`.
 ---@return nil
-function emu.atdrawd2d(f, unregister) end
+function emu.atpaint(f, unregister) end
 
 ---Calls the function `f` every input frame.
----The function `f` receives an argument that seems to always be `0`.
 ---If `unregister` is set to true, the function `f` will no longer be called when this event occurs, but it will error if you never registered the function.
----@param f fun(a: integer?): nil The function to be called every input frame. It receives an argument that seems to always be `0`.
+---@param f fun(controller: integer): nil The function to be called every input frame. `controller` is the controller index (0-based!).
 ---@param unregister boolean? If true, then unregister the function `f`.
 ---@return nil
 function emu.atinput(f, unregister) end
@@ -711,28 +1015,24 @@ function emu.ismainwindowinforeground() end
 ---@alias qword [integer, integer]
 
 ---Reinterprets the bits of a 4 byte integer `n` as a float and returns it.
----This does not convert from an int to a float, but reinterprets the memory.
 ---@nodiscard
 ---@param n integer
 ---@return number
 function memory.inttofloat(n) end
 
 ---Reinterprets the bits of an 8 byte integer `n` as a double and returns it.
----This does not convert from an int to a double, but reinterprets the memory.
 ---@nodiscard
 ---@param n qword
 ---@return number
 function memory.inttodouble(n) end
 
 ---Reinterprets the bits of a float `n` as a 4 byte integer and returns it.
----This does not convert from an int to a float, but reinterprets the memory.
 ---@nodiscard
 ---@param n number
 ---@return integer
 function memory.floattoint(n) end
 
 ---Reinterprets the bits of a 8 byte integer `n` as a double and returns it.
----This does not convert from an int to a float, but reinterprets the memory.
 ---@nodiscard
 ---@param n qword
 ---@return number
@@ -1035,8 +1335,8 @@ function wgui.fillpolygona(points, color) end
 ---@return integer
 function wgui.loadimage(path) end
 
----Clears one or all images.
----@param idx integer The identifier of the image to clear. If it is 0, clear all iamges.
+---Deletes one or all images.
+---@param idx integer The identifier of the image to clear. If it is 0, deletes all images.
 function wgui.deleteimage(idx) end
 
 ---Saves an image to the specified path.
@@ -1132,211 +1432,396 @@ function wgui.resetclip() end
 --#endregion
 
 
--- d2d functions
+-- painter functions
 --#region
 
----@alias brush integer
+---All painter coordinates and sizes are expressed in device-independent pixels.
+---Painter does not impose the old `MAX_LAYOUT_SIZE` input cap or silently clamp numeric drawing values. Floating-point inputs are passed to Direct2D/DirectWrite as floats; native APIs may reject extreme, non-finite, or unsupported values, or produce renderer-defined output. Type and API-specific checks still apply.
+---@class PainterRect
+---@field x number The x-coordinate of the top-left corner.
+---@field y number The y-coordinate of the top-left corner.
+---@field w number The rectangle width. If negative, the rectangle's left edge moves left by `abs(w)` and `w` becomes `abs(w)`.
+---@field h number The rectangle height. If negative, the rectangle's top edge moves up by `abs(h)` and `h` becomes `abs(h)`.
 
----@class D2DColor
----@field r number The red component of the color in the range [0, 1].
----@field g number The green component of the color in the range [0, 1].
----@field b number The blue component of the color in the range [0, 1].
----@field a number The alpha component of the color in the range [0, 1].
+---An RGBA color table.
+---@class PainterColorTable
+---@field r number The red component, normally in [0, 1].
+---@field g number The green component, normally in [0, 1].
+---@field b number The blue component, normally in [0, 1].
+---@field a number? The alpha component, normally in [0, 1]. Defaults to 1.
 
----@class D2DDrawImageParams
----@field identifier integer The identifier of the image to draw, as returned by [d2d.load_image](lua://d2d.load_image).
----@field destx1 integer The x-coordinate of the top-left corner of the destination rectangle.
----@field desty1 integer The y-coordinate of the top-left corner of the destination rectangle.
----@field destx2 integer? The x-coordinate of the bottom-right corner of the destination rectangle. If `nil`, `destx1` plus the natural width of the image is assumed.
----@field desty2 integer? The y-coordinate of the bottom-right corner of the destination rectangle. If `nil`, `desty1` plus the natural height of the image is assumed.
----@field srcx1 integer? The x-coordinate of the top-left corner of the source rectangle. If `nil`, `0` is assumed.
----@field srcy1 integer? The y-coordinate of the top-left corner of the source rectangle. If `nil`, `0` is assumed.
----@field srcx2 integer? The x-coordinate of the bottom-right corner of the source rectangle. If `nil`, `srcx1` plus the natural width of the image is assumed.
----@field srcy2 integer? The y-coordinate of the bottom-right corner of the source rectangle. If `nil`, `srcy1` plus the natural height of the image is assumed.
----@field color D2DColor? The color to tint the image with. The RGB components are treated as multipliers, and the alpha component is treated as the opacity. If `nil`, the image is drawn without tinting.
----@field interpolation integer? The interpolation mode to use. 0: nearest neighbor, 1|nil: linear.
+---A color, either an RGBA table or a hex string `"#RRGGBBAA"` or `"#RRGGBB"`.
+---@alias PainterColor
+---| PainterColorTable
+---| string
 
----Gets the target frequency of the `emu.atdrawd2d` and `emu.atupdatescreen` callbacks in FPS.
----@return number? # The target FPS, or nil.
-function d2d.get_target_fps() end
+---@class PainterGradientStop
+---@field offset number Position in range `[0, 1]`.
+---@field color PainterColor
 
----Sets the target frequency of the `emu.atdrawd2d` and `emu.atupdatescreen` callbacks in FPS.
----@param fps number? The target FPS. If nil, the target FPS will be the monitor's refresh rate.
-function d2d.set_target_fps(fps) end
+---A linear gradient.
+---@class PainterLinearGradient
+---@field type "linear_gradient"
+---@field x0 number Start x coordinate.
+---@field y0 number Start y coordinate.
+---@field x1 number End x coordinate.
+---@field y1 number End y coordinate.
+---@field stops PainterGradientStop[] At least two stops in range `[0, 1]`. Coincident endpoints are separated by 1 pixel. Sorted by offset.
 
----Creates a brush from a color and returns it. D2D colors range from 0 to 1.
----@param r number
----@param g number
----@param b number
----@param a number
----@return brush
-function d2d.create_brush(r, g, b, a) end
+---A centered elliptical radial gradient.
+---@class PainterRadialGradient
+---@field type "radial_gradient"
+---@field center_x number Center x coordinate.
+---@field center_y number Center y coordinate.
+---@field radius_x number Horizontal radius.
+---@field radius_y number Vertical radius.
+---@field stops PainterGradientStop[] At least two stops in range `[0, 1]`. Sorted by offset.
 
----Frees a brush.
----It is a good practice to free all brushes after you are done using them.
----@param brush brush
-function d2d.free_brush(brush) end
+---@alias PainterPaint PainterColor|PainterLinearGradient|PainterRadialGradient
 
----Sets clear behavior.
----If this function is never called, the screen will not be cleared.
----If it is called, the screen will be cleared with the specified color.
----@param r number
----@param g number
----@param b number
----@param a number
-function d2d.clear(r, g, b, a) end
+---A flat list of coordinates in the form `{ x1, y1, x2, y2, ... }`.
+---A flat representation avoids allocating a table for every point and must contain at least two points.
+---@alias PainterPoints number[]
 
----Draws a filled in rectangle at the specified coordinates and color.
----@param x1 integer
----@param y1 integer
----@param x2 integer
----@param y2 integer
----@param brush brush
----@return nil
-function d2d.fill_rectangle(x1, y1, x2, y2, brush) end
+---@alias PainterLineCap "butt"|"round"|"square"
+---@alias PainterLineJoin "miter"|"round"|"bevel"
 
----Draws the border of a rectangle at the specified coordinates and color.
----@param x1 integer
----@param y1 integer
----@param x2 integer
----@param y2 integer
----@param thickness number
----@param brush brush
----@return nil
-function d2d.draw_rectangle(x1, y1, x2, y2, thickness, brush) end
+---@class PainterStrokeStyle
+---@field width number? The stroke width. Defaults to 1.
+---@field cap PainterLineCap? The shape of line endpoints. Defaults to `"butt"`.
+---@field join PainterLineJoin? The shape of line joins. Defaults to `"miter"`.
+---@field miter_limit number? The maximum miter length relative to the stroke width. Defaults to 4.
+---@field dashes number[]? Alternating dash and gap lengths. An empty or absent list produces a solid stroke.
+---@field dash_offset number? The offset into the dash pattern. Defaults to 0.
 
----Draws a filled in ellipse at the specified coordinates and color.
----@param x integer
----@param y integer
----@param radiusX integer
----@param radiusY integer
----@param brush brush
----@return nil
-function d2d.fill_ellipse(x, y, radiusX, radiusY, brush) end
+---@alias PainterFontSlant "normal"|"italic"|"oblique"
 
----Draws the border of an ellipse at the specified coordinates and color.
----@param x integer
----@param y integer
----@param radiusX integer
----@param radiusY integer
----@param thickness number
----@param brush brush
----@return nil
-function d2d.draw_ellipse(x, y, radiusX, radiusY, thickness, brush) end
+---@class PainterTextStyleParams
+---@field family string|string[]? A font family or fallback list. Defaults to the platform UI font.
+---@field size number? The font size. Defaults to 12.
+---@field weight integer? A font weight from 1 through 1000. 400 is normal and 700 is bold. Defaults to 400.
+---@field slant PainterFontSlant? Defaults to `"normal"`.
+---@field underline boolean? Defaults to false.
+---@field strikethrough boolean? Defaults to false.
+---@field letter_spacing number? Extra spacing between characters. Defaults to 0.
+---@field line_height number? Line height as a multiplier of the font size. If absent, the font's natural line height is used.
+---@field antialiased boolean? Whether to render text with grayscale antialiasing. Defaults to true. ClearType is never used.
+---@field fit boolean? Whether to uniformly scale the text down to fit its layout rectangle. Defaults to false.
+---@field align_x PainterTextHorizontalAlign? Horizontal alignment. Defaults to "left".
+---@field align_y PainterTextVerticalAlign? Vertical alignment. Defaults to "top".
+---@field wrap PainterTextWrap? Wrapping mode. Defaults to "word".
+---@field overflow PainterTextOverflow? Behavior when text does not fit. Defaults to "clip".
+---@field clip boolean? Whether glyphs are clipped to the layout rectangle. Defaults to true.
 
----Draws a line from `(x1, y1)` to `(x2, y2)` in the specified color.
----@param x1 integer
----@param y1 integer
----@param x2 integer
----@param y2 integer
----@param thickness number
----@param brush brush
----@return nil
-function d2d.draw_line(x1, y1, x2, y2, thickness, brush) end
+---@alias PainterTextHorizontalAlign "left"|"center"|"right"|"justify"
+---@alias PainterTextVerticalAlign "top"|"center"|"bottom"
+---@alias PainterTextWrap "none"|"word"|"character"
+---@alias PainterTextOverflow "visible"|"clip"|"ellipsis"
 
----Draws the text `text` at the specified coordinates, color, font, and alignment.
----@param x1 integer
----@param y1 integer
----@param x2 integer
----@param y2 integer
----@param text string
----@param fontname string
----@param fontsize number
----@param fontweight number
----@param fontstyle 0|1|2|3 0: normal, 1: bold, 2: italic, 3: bold + italic.
----@param horizalign integer
----@param vertalign integer
----@param options integer
----@param brush brush pass 0 if you don't know what you're doing
----@return nil
-function d2d.draw_text(x1, y1, x2, y2, text, fontname, fontsize, fontweight,
-                       fontstyle, horizalign, vertalign, options, brush)
-end
 
----Returns the width and height of the specified text.
----@param text string
----@param fontname string
----@param fontsize number
----@param max_width number
----@param max_height number
----@return {width: integer, height: integer}
-function d2d.get_text_size(text, fontname, fontsize, max_width, max_height) end
+---@class PainterTextConstraints
+---@field w number? Maximum layout width. If absent, width is unconstrained.
+---@field h number? Maximum layout height. If absent, height is unconstrained.
+---@field wrap PainterTextWrap? Wrapping mode. Defaults to `"word"` when `w` is present and `"none"` otherwise.
+---@field max_lines integer? Maximum number of laid-out lines. Non-positive values disable this limit.
 
----Specifies a rectangle to which all subsequent drawing operations are clipped.
----This clip is put onto a stack.
----It can then be popped off the stack with `wgui.d2d_pop_clip`.
----@param x1 integer
----@param y1 integer
----@param x2 integer
----@param y2 integer
----@return nil
-function d2d.push_clip(x1, y1, x2, y2) end
+---@class PainterTextMetrics
+---@field w number The width of the laid-out text, including trailing whitespace.
+---@field h number The height of the laid-out text.
+---@field line_count integer The number of laid-out lines.
+---@field baseline number The first line's baseline measured from the top of the layout.
+---@field truncated boolean Whether width, height, or `max_lines` truncated the text.
 
----Pops the most recent clip off the clip stack.
----@return nil
-function d2d.pop_clip() end
+---@class PainterTextHitTestOptions
+---@field w number? Layout width. If absent, width is unconstrained.
+---@field h number? Layout height. If absent, height is unconstrained.
+---@field wrap PainterTextWrap? Wrapping mode. Defaults to `"word"` when `w` is present and `"none"` otherwise.
+---@field overflow PainterTextOverflow? Overflow behavior. Defaults to `"clip"`.
+---@field clip boolean? Whether hit points outside the layout rectangle are reported as outside. Defaults to true.
+---@field fit boolean? Whether to uniformly scale the text to fit the layout rectangle. Defaults to false.
+---@field align_x PainterTextHorizontalAlign? Horizontal alignment. Defaults to `"left"`.
+---@field align_y PainterTextVerticalAlign? Vertical alignment. Defaults to `"top"`.
 
----Draws a filled in rounded rectangle at the specified coordinates, color and radius.
----@param x1 integer
----@param y1 integer
----@param x2 integer
----@param y2 integer
----@param radiusX number
----@param radiusY number
----@param brush brush
----@return nil
-function d2d.fill_rounded_rectangle(x1, y1, x2, y2, radiusX, radiusY, brush) end
+---@class PainterTextHitTestResult
+---@field index integer 1-based byte index into the original Lua UTF-8 string. The value after the final byte is the string length plus one.
+---@field line integer One-based laid-out line number.
+---@field inside boolean Whether the point is inside the text layout.
 
----Draws the border of a rounded rectangle at the specified coordinates, color and radius.
----@param x1 integer
----@param y1 integer
----@param x2 integer
----@param y2 integer
----@param radiusX number
----@param radiusY number
----@param thickness number
----@param brush brush
----@return nil
-function d2d.draw_rounded_rectangle(x1, y1, x2, y2, radiusX, radiusY, thickness,
-                                    brush)
-end
+---@class PainterTextPositionResult
+---@field x number X-coordinate of the insertion position relative to the layout.
+---@field y number Y-coordinate of the insertion position relative to the layout.
+---@field line integer One-based laid-out line number.
 
----Loads an image file from `path` which you can then access through `identifier`.
----@param path string
----@return integer
-function d2d.load_image(path) end
+---@alias PainterSampling "nearest"|"linear"
 
----Frees the image at `identifier`.
----@param identifier number
----@return nil
-function d2d.free_image(identifier) end
+---@class PainterImageOptions
+---@field source PainterRect? The source rectangle in image pixels. Defaults to the whole image. Required when `center` is provided; keep it within the image bounds.
+---@field center PainterRect? The center rectangle in image pixels for nine-sliced drawing. Keep it within `source`; the surrounding corners retain their original size and aspect ratio. If the destination cannot fit the corners, only this center is stretched over it.
+---@field opacity number? Opacity, normally in [0, 1]. Defaults to 1.
+---@field sampling PainterSampling? Sampling used when scaling. Defaults to `"linear"`.
+---@field tint PainterColor? A color multiplied with the image pixels before blending.
 
----Draws an image with the specified parameters.
----@param params D2DDrawImageParams The draw parameters.
-function d2d.draw_image2(params) end
+---A decoded image which can also be used as a drawing target.
+---Resources are garbage-collected, but `close` can be used for deterministic release.
+---@class PainterImage
+---@field w integer The natural width in pixels.
+---@field h integer The natural height in pixels.
+local PainterImage = {}
 
----Returns the width and height of the image at `identifier`.
+---Invokes `callback` immediately with a painter targeting this image.
+---Drawing updates the image in place. The painter is only valid for the duration of the callback.
+---@param callback fun(p: Painter): nil
+function PainterImage:paint(callback) end
+
+---Releases the image's native resources. Calling this more than once has no effect.
+---Using the image afterward is an error.
+function PainterImage:close() end
+
+---Creates a transparent image which can be drawn into with [PainterImage:paint](lua://PainterImage.paint).
 ---@nodiscard
----@param identifier number
----@return {width: integer, height: integer}
-function d2d.get_image_info(identifier) end
+---@param width integer The image width in pixels. Must be greater than zero.
+---@param height integer The image height in pixels. Must be greater than zero.
+---@return PainterImage
+function painter.new_image(width, height) end
 
----Sets the text antialiasing mode.
----More info [here](https://learn.microsoft.com/en-us/windows/win32/api/d2d1/ne-d2d1-d2d1_text_antialias_mode).
----@param mode 0|1|2|3|4294967295
-function d2d.set_text_antialias_mode(mode) end
+---Loads and decodes an image from a file.
+---@nodiscard
+---@param path string
+---@return PainterImage? image
+---@return string? error_message
+function painter.load_image(path) end
 
----Sets the antialiasing mode.
----More info [here](https://learn.microsoft.com/en-us/windows/win32/api/d2d1/ne-d2d1-d2d1_antialias_mode).
----@param mode 0|1|4294967295
-function d2d.set_antialias_mode(mode) end
+---Decodes an image from a binary Lua string.
+---The encoded format is detected from the data.
+---@nodiscard
+---@param data string
+---@return PainterImage? image
+---@return string? error_message
+function painter.decode_image(data) end
 
----Draws to an image and returns its identifier.
----@param width integer
----@param height integer
----@param callback fun()
----@return number
-function d2d.draw_to_image(width, height, callback) end
+---Gets the painter for the currently active painter scope.
+---This is valid in an [emu.atpaint](lua://emu.atpaint) or [PainterImage:paint](lua://PainterImage.paint) callback and errors outside one.
+---@nodiscard
+---@return Painter
+function painter.current() end
+
+---Gets the target frame rate for Lua painting.
+---Returns `nil` when the renderer uses the monitor refresh rate.
+---@return number? target_fps
+function painter.get_target_fps() end
+
+---Sets the target frame rate for Lua painting.
+---@param target_fps number? The target FPS, or `nil` to use the monitor refresh rate. Non-finite or non-positive values are ignored.
+function painter.set_target_fps(target_fps) end
+
+---The short-lived drawing context returned by [painter.current](lua://painter.current).
+---Methods must only be called while its painter scope is active.
+---@class Painter
+local Painter = {}
+
+---@class PainterMatrix3x2
+---@field m11 number Transform matrix component.
+---@field m12 number Transform matrix component.
+---@field m21 number Transform matrix component.
+---@field m22 number Transform matrix component.
+---@field m31 number X translation component.
+---@field m32 number Y translation component.
+local PainterMatrix3x2 = {}
+
+---@return number X translation.
+function PainterMatrix3x2:dx() end
+
+---@return number Y translation.
+function PainterMatrix3x2:dy() end
+
+---@return number X-axis scale.
+function PainterMatrix3x2:sx() end
+
+---@return number Y-axis scale.
+function PainterMatrix3x2:sy() end
+
+---Returns the current transform.
+---@nodiscard
+---@return PainterMatrix3x2 transform
+function Painter:get_transform() end
+
+---Sets the current transform to `transform`.
+---@param transform PainterMatrix3x2
+function Painter:set_transform(transform) end
+
+---Clears the entire drawing target to `color`, ignoring the current clip stack.
+---When called from [PainterImage:paint](lua://PainterImage.paint), this clears the image rather than the screen.
+---@param color PainterColor
+function Painter:clear(color) end
+
+---Begins a new drawing path, discarding any current path.
+---A path is a sequence of subpaths built by the primitives below. Shape functions such as [Painter:rect](lua://Painter.rect) append subpaths as well.
+function Painter:begin_path() end
+
+---Starts a new subpath at `(x, y)`.
+---@param x number
+---@param y number
+function Painter:move_to(x, y) end
+
+---Adds a line from the current point to `(x, y)`, which becomes the current point.
+---Starts a new subpath at `(x, y)` if there is no current point.
+---@param x number
+---@param y number
+function Painter:line_to(x, y) end
+
+---Adds a cubic Bézier curve from the current point to `(x, y)` with control points `(c1x, c1y)` and `(c2x, c2y)`. `(x, y)` becomes the current point.
+---Starts at `(c1x, c1y)` if there is no current point.
+---@param c1x number
+---@param c1y number
+---@param c2x number
+---@param c2y number
+---@param x number
+---@param y number
+function Painter:cubic_to(c1x, c1y, c2x, c2y, x, y) end
+
+---Adds a quadratic Bézier curve from the current point to `(x, y)` with control point `(cx, cy)`. `(x, y)` becomes the current point.
+---Starts at `(cx, cy)` if there is no current point.
+---@param cx number
+---@param cy number
+---@param x number
+---@param y number
+function Painter:quadratic_to(cx, cy, x, y) end
+
+---Adds a circular arc centered at `(x, y)` from `start_angle` to `end_angle` radians. The arc end point becomes the current point.
+---Angles start at the positive x axis and increase toward the positive y axis, which is clockwise on screen.
+---Adds a line from the current point to the arc start if there is one, otherwise starts a new subpath.
+---With `ccw` the arc sweeps counterclockwise. A zero sweep adds nothing and a full turn adds a full circle.
+---@param x number
+---@param y number
+---@param radius number
+---@param start_angle number
+---@param end_angle number
+---@param ccw boolean? Defaults to false.
+function Painter:arc(x, y, radius, start_angle, end_angle, ccw) end
+
+---Closes the current subpath with a line back to its start point, which becomes the current point.
+---Does nothing if the subpath is empty or already closed. This closes the subpath only. Later primitives start a new subpath.
+function Painter:close_path() end
+
+---Returns the current global drawing alpha. Defaults to 1.
+---@nodiscard
+---@return number alpha
+function Painter:get_alpha() end
+
+---Sets the global drawing alpha, which multiplies the alpha of subsequent drawing operations.
+---@param alpha number The global alpha. Finite values are clamped to [0, 1]; non-finite values are treated as 1.
+function Painter:set_alpha(alpha) end
+
+---Saves the current transform, alpha, and clip state.
+function Painter:save() end
+
+---Restores the last saved transform, alpha, and clip state.
+function Painter:restore() end
+
+---Merges `rect` with the current clip.
+---Can be undone with [Painter:restore](lua://Painter.restore).
+---@param rect PainterRect
+function Painter:clip(rect) end
+
+---Translates the current transform by `x` and `y`.
+---Can be undone with [Painter:restore](lua://Painter.restore).
+---@param x number
+---@param y number
+function Painter:translate(x, y) end
+
+---Rotates the current transform by `angle` radians.
+---Can be undone with [Painter:restore](lua://Painter.restore).
+---@param angle number
+function Painter:rotate(angle) end
+
+---Scales the current transform by `x` and `y`.
+---Can be undone with [Painter:restore](lua://Painter.restore).
+---@param x number
+---@param y number
+function Painter:scale(x, y) end
+
+---Strokes the current path.
+---The path is not consumed and can be stroked or filled again until [Painter:begin_path](lua://Painter.begin_path) replaces it.
+---@param paint PainterPaint
+---@param style PainterStrokeStyle?
+function Painter:stroke(paint, style) end
+
+---Fills the current path.
+---The path is not consumed and can be stroked or filled again until [Painter:begin_path](lua://Painter.begin_path) replaces it.
+---@param paint PainterPaint
+function Painter:fill(paint) end
+
+---Adds text to the current path.
+---@param text string
+---@param rect PainterRect
+---@param style PainterTextStyleParams
+function Painter:text(text, rect, style) end
+
+---Adds a rectangle to the current path.
+---@param rect PainterRect
+function Painter:rect(rect) end
+
+---Adds a rounded rectangle to the current path.
+---@param rect PainterRect
+---@param radius number The corner radius. It is passed through to the path geometry.
+function Painter:round_rect(rect, radius) end
+
+---Adds a circle to the current path.
+---@param rect PainterRect
+function Painter:circle(rect) end
+
+---Adds a line to the current path.
+---@param x1 number
+---@param y1 number
+---@param x2 number
+---@param y2 number
+function Painter:line(x1, y1, x2, y2) end
+
+---Adds connected line segments that don't close a shape to the current path.
+---@param points PainterPoints
+function Painter:polyline(points) end
+
+---Adds a closed polygon using the non-zero winding rule to the current path.
+---@param points PainterPoints
+function Painter:polygon(points) end
+
+---Draws an image into `destination`.
+---When `options.center` is provided, the image is drawn in nine slices.
+---When drawing in nine slices, corners retain their original size even under scale transforms and slice boundaries are snapped to pixels.
+---@param image PainterImage
+---@param destination PainterRect
+---@param options PainterImageOptions?
+function Painter:image(image, destination, options) end
+
+---Measures text using the same shaping and wrapping rules as [Painter:text](lua://Painter.text).
+---@nodiscard
+---@param text string
+---@param style PainterTextStyleParams
+---@param constraints PainterTextConstraints?
+---@return PainterTextMetrics
+function painter.measure_text(text, style, constraints) end
+
+---Hittests text at a point.
+---@nodiscard
+---@param text string
+---@param x number
+---@param y number
+---@param style PainterTextStyleParams
+---@param options PainterTextHitTestOptions?
+---@return PainterTextHitTestResult
+function painter.hittest_text_position(text, x, y, style, options) end
+
+---Returns the layout coordinate for a byte insertion index in a UTF-8 Lua string.
+---@nodiscard
+---@param text string
+---@param index integer 1-based byte index into `text` at a UTF-8 codepoint boundary. The value after the final byte is valid.
+---@param style PainterTextStyleParams
+---@param options PainterTextHitTestOptions?
+---@return PainterTextPositionResult
+function painter.hittest_text_index(text, index, style, options) end
+
+---Compatibility alias with the historical misspelling.
+function painter.hitest_text_index(text, index, style, options) end
 
 --#endregion
 
@@ -1485,8 +1970,9 @@ function input.diff(t1, t2) end
 function input.prompt(title, placeholder) end
 
 ---Gets the name of a key.
+---@deprecated This function shouldn't be used.
 ---@nodiscard
----@param key integer
+---@param key VKeycode
 ---@return string
 function input.get_key_name_text(key) end
 
@@ -1496,24 +1982,23 @@ function input.get_key_name_text(key) end
 -- joypad functions
 --#region
 
----@alias JoypadInputs {
----right: boolean,
----left: boolean,
----down: boolean,
----up: boolean,
----start: boolean,
----Z: boolean,
----B: boolean,
----A: boolean,
----Cright: boolean,
----Cleft: boolean,
----Cdown: boolean,
----Cup: boolean,
----R: boolean,
----L: boolean,
----Y: integer,
----X: integer,
----}
+---@class JoypadInputs
+---@field right boolean
+---@field left boolean
+---@field down boolean
+---@field up boolean
+---@field start boolean
+---@field Z boolean
+---@field B boolean
+---@field A boolean
+---@field Cright boolean
+---@field Cleft boolean
+---@field Cdown boolean
+---@field Cup boolean
+---@field R boolean
+---@field L boolean
+---@field X integer The joystick X value with range [-128, 127].
+---@field Y integer The joystick Y value with range [-128, 127].
 
 
 ---Gets the currently pressed game buttons and stick direction for a given port.
@@ -1575,6 +2060,7 @@ function movie.get_readonly() end
 function movie.set_readonly(readonly) end
 
 ---Begins seeking.
+---The seek operation might end before the target frame is reached, so make sure to check the current frame via `movie.get_seek_completion()`.
 ---@param str string
 ---@param pause_at_end boolean
 ---@return integer
@@ -1683,16 +2169,42 @@ function avi.stopcapture() end
 -- hotkey functions
 --#region
 
----@class Hotkey Represents a combination of keys.
----@field key VKeycode? The key that is pressed to trigger the hotkey. Note that this is a virtual keycode.
----@field ctrl boolean? Whether the control modifier is pressed.
----@field shift boolean? Whether the shift modifier is pressed.
----@field alt boolean? Whether the alt modifier is pressed.
----@field assigned boolean? Whether the hotkey is assigned. Defaults to `true`.
+---@class HotkeyNoTrigger
+---@field type "none"
+---Represents an unassigned hotkey trigger.
+
+---@class HotkeyKeyCodeTrigger
+---@field type "keycode"
+---@field value Keycode The SDL keycode that triggers the hotkey.
+---Represents a keyboard hotkey trigger.
+
+---@class HotkeyMouseButtonTrigger
+---@field type "mousebutton"
+---@field value MouseButtonFlags The SDL mouse-button flag that triggers the hotkey.
+---Represents a mouse hotkey trigger.
+
+---@alias HotkeyTrigger HotkeyNoTrigger|HotkeyKeyCodeTrigger|HotkeyMouseButtonTrigger
+
+---@class HotkeyModifiers
+---@field ctrl boolean? Whether the control modifier is pressed. Defaults to `false`.
+---@field shift boolean? Whether the shift modifier is pressed. Defaults to `false`.
+---@field alt boolean? Whether the alt modifier is pressed. Defaults to `false`.
+
+---@class Hotkey: HotkeyModifiers
+---@field trigger HotkeyTrigger The event that triggers the hotkey.
+---@field key nil The deprecated legacy key field cannot be used with `trigger`.
+---Represents a trigger and its keyboard modifiers. Can invoke an action.
+
+---@deprecated Use `trigger` instead.
+---@class LegacyHotkey: HotkeyModifiers
+---@field key VKeycode The deprecated Windows virtual keycode that triggers the hotkey.
+---@field trigger nil The legacy key field cannot be used with `trigger`.
+---A legacy hotkey returned as the first result by `hotkey.prompt` and accepted by `action.associate_hotkey` for compatibility.
 
 ---Shows a dialog prompting the user to enter a hotkey.
 ---@param caption string The headline to display in the dialog.
----@return Hotkey|nil The hotkey that was entered, or `nil` if the user cancelled the dialog.
+---@return LegacyHotkey|nil legacy_hotkey The deprecated legacy hotkey, or `nil` if the user cancelled the dialog.
+---@return Hotkey|nil hotkey The modern hotkey, or `nil` if the user cancelled the dialog.
 function hotkey.prompt(caption) end
 
 --#endregion
@@ -1749,7 +2261,7 @@ function action.remove(filter) end
 
 ---Associates a hotkey with an action by its path, while replacing any existing hotkey association for that action.
 ---@param path ActionPath A path.
----@param hotkey Hotkey The hotkey to associate with the action.
+---@param hotkey Hotkey|LegacyHotkey The hotkey to associate with the action. `LegacyHotkey` is deprecated; its `key` field is mutually exclusive with `trigger`.
 ---@param overwrite_existing boolean? Whether the any existing hotkey association will be overwritten. If false, the hotkey will only be associated if the action has no hotkey associated with it already.
 ---@return boolean # Whether the operation succeeded.
 function action.associate_hotkey(path, hotkey, overwrite_existing) end
@@ -1812,10 +2324,15 @@ function action.get_actions_matching_filter(filter) end
 function action.invoke(path, up, release_on_repress, params) end
 
 ---Locks or unlocks action invocations from hotkeys.
----@param lock boolean Whether to lock or unlock action invocations from hotkeys.
-function action.lock_hotkeys(lock) end
+---@param lock boolean Whether to lock or unlock action invocations from hotkeys. All hotkeys are affected on unlock.
+---@param hotkeys Hotkey[]? The hotkeys affected by the lock. Ignored when unlocking.
+function action.lock_hotkeys(lock, hotkeys) end
 
----@return boolean # Whether action invocations from hotkeys are currently locked.
+---Gets the hotkeys locked via `action.lock_hotkeys`.
+---@return Hotkey[]? hotkeys The locked hotkeys. An empty table if all hotkeys are locked, or `nil` if no hotkeys are locked.
+function action.get_locked_hotkeys() end
+
+---@return boolean # Whether action invocations from any hotkeys are currently locked.
 function action.get_hotkeys_locked() end
 
 --#endregion
@@ -1846,3 +2363,428 @@ function clipboard.set(type, value) end
 function clipboard.clear() end
 
 --#endregion
+
+function __mupen_apply_shims()
+    -- printx deprecated, forwarded to print
+    printx = print
+
+    -- table.getn deprecated, replaced by # prefix
+    table.getn = table.getn or function(t)
+        return #t
+    end
+
+    -- unpack -> table.unpack
+    unpack = unpack or table.unpack
+
+    -- math.atan2 shim
+    math.atan2 = math.atan2 or function(y, x)
+        if x > 0 then
+            return math.atan(y / x)
+        elseif x < 0 then
+            return math.atan(y / x) + (y >= 0 and math.pi or -math.pi)
+        elseif y > 0 then
+            return math.pi / 2
+        elseif y < 0 then
+            return -math.pi / 2
+        else
+            return 0
+        end
+    end
+
+    -- math.pow shim
+    math.pow = math.pow or function(x, y)
+        return x ^ y
+    end
+
+    -- emu.debugview deprecated, forwarded to print
+    emu.debugview = print
+
+    -- emu.setgfx deprecated, no-op
+    emu.setgfx = function(_) end
+
+    -- emu.isreadonly deprecated, forwarded to movie.get_readonly
+    emu.isreadonly = movie.get_readonly
+
+    -- emu.getsystemmetrics is not available anymore due to WinAPI coupling concerns.
+    emu.getsystemmetrics = function() print('emu.getsystemmetrics has been deprecated') end
+
+    -- movie.playmovie deprecated, forwarded to movie.play
+    movie.playmovie = movie.play
+
+    -- movie.stopmovie deprecated, forwarded to movie.stop
+    movie.stopmovie = movie.stop
+
+    -- movie.getmoviefilename deprecated, forwarded to movie.get_filename
+    movie.getmoviefilename = movie.get_filename
+
+    -- movie.isreadonly deprecated, forwarded to movie.get_readonly
+    movie.isreadonly = movie.get_readonly
+
+    -- movie.begin_seek_to is not available anymore due to fundamental unshimmable changes in the seek API.
+    movie.begin_seek_to = function() print('movie.begin_seek_to has been deprecated, use movie.begin_seek instead') end
+
+    -- movie.get_seek_info is not available anymore due to fundamental unshimmable changes in the seek API.
+    movie.get_seek_info = function() print('movie.get_seek_info has been deprecated, use movie.begin_seek instead') end
+
+    -- input.map_virtual_key_ex is not available anymore due to WinAPI coupling concerns.
+    input.map_virtual_key_ex = function() print('input.map_virtual_key_ex has been deprecated') end
+
+    -- memory.recompilenow deprecated, forwarded to memory.recompile
+    memory.recompilenow = memory.recompile
+
+    -- memory.recompilenext deprecated, forwarded to memory.recompile
+    memory.recompilenext = memory.recompile
+
+    ---Gets whether fast forward is active.
+    ---@deprecated Use `emu.get_speed_mode` instead.
+    ---@return boolean
+    function emu.get_ff()
+        local mode = emu.get_speed_mode()
+        return mode ~= Mupen.CoreSpeedMode.Normal
+    end
+
+    ---Sets whether fast forward is active.
+    ---@deprecated Use `emu.set_speed_mode` instead.
+    ---@param fast_forward boolean
+    function emu.set_ff(fast_forward)
+        emu.set_speed_mode(fast_forward and Mupen.CoreSpeedMode.FastForward or Mupen.CoreSpeedMode.Normal)
+    end
+
+    ---Saves a savestate to `filename`.
+    ---@param filename string
+    ---@return nil
+    ---@deprecated This function is not guaranteed to succeed successfully or at any specific point in time. Use `savestate.do_file` instead.
+    function savestate.savefile(filename)
+        savestate.do_file(filename, "save", function() end)
+    end
+
+    ---Loads a savestate from `filename`.
+    ---@param filename string
+    ---@return nil
+    ---@deprecated This function is not guaranteed to succeed successfully or at any specific point in time. Use `savestate.do_file` instead.
+    function savestate.loadfile(filename)
+        savestate.do_file(filename, "load", function() end)
+    end
+
+    d2d = {}
+
+    local brushes = {}
+    local images = {}
+    local next_brush = 1
+    local next_image = 1
+    local active_painter
+    local WHITE = { r = 1, g = 1, b = 1, a = 1 }
+
+    local function require_painter()
+        if not active_painter then
+            error("d2d drawing functions must be called from an emu.atpaint callback", 2)
+        end
+        return active_painter
+    end
+
+    local function require_brush(handle)
+        if handle == 0 then
+            return WHITE
+        end
+        local color = brushes[handle]
+        if not color then
+            error("invalid d2d brush handle", 3)
+        end
+        return color
+    end
+
+    local function require_image(handle)
+        local image = images[handle]
+        if not image then
+            error("invalid d2d image identifier", 3)
+        end
+        return image
+    end
+
+    local function with_path(callback)
+        local p = require_painter()
+        p:begin_path()
+        callback(p)
+        return p
+    end
+
+    local atdrawd2d_callbacks = {}
+    local atdrawd2d_dispatch_registered = false
+
+    local function dispatch_atdrawd2d()
+        active_painter = painter.current()
+        local callbacks = {}
+        for i, callback in ipairs(atdrawd2d_callbacks) do
+            callbacks[i] = callback
+        end
+        local ok, error_message = pcall(function()
+            for _, callback in ipairs(callbacks) do
+                callback()
+            end
+        end)
+        active_painter = nil
+        if not ok then
+            error(error_message, 0)
+        end
+    end
+
+    ---Similar to `emu.atvi`, but for legacy `d2d` and `wgui` drawing commands.
+    ---@param f fun(): nil The function to be called after every VI frame.
+    ---@param unregister boolean? If true, unregister the function `f`.
+    function emu.atdrawd2d(f, unregister)
+        if type(f) ~= "function" then
+            error("emu.atdrawd2d expects a function", 2)
+        end
+
+        if unregister then
+            for i, callback in ipairs(atdrawd2d_callbacks) do
+                if callback == f then
+                    table.remove(atdrawd2d_callbacks, i)
+                    return
+                end
+            end
+            error("attempt to unregister an unregistered emu.atdrawd2d callback", 2)
+        end
+
+        if not atdrawd2d_dispatch_registered then
+            emu.atpaint(dispatch_atdrawd2d)
+            atdrawd2d_dispatch_registered = true
+        end
+        table.insert(atdrawd2d_callbacks, f)
+    end
+
+    ---@deprecated Use [painter.get_target_fps](lua://painter.get_target_fps) instead.
+    d2d.get_target_fps = function()
+        return painter.get_target_fps()
+    end
+
+    ---@deprecated Use [painter.set_target_fps](lua://painter.set_target_fps) instead.
+    d2d.set_target_fps = function(fps)
+        return painter.set_target_fps(fps)
+    end
+
+    ---@deprecated Use painter colors and [Painter:fill](lua://Painter:fill) instead.
+    function d2d.create_brush(r, g, b, a)
+        local handle = next_brush
+        next_brush = next_brush + 1
+        brushes[handle] = { r = r, g = g, b = b, a = a }
+        return handle
+    end
+
+    ---@deprecated Use Lua garbage collection or [PainterImage:close](lua://PainterImage:close) instead.
+    function d2d.free_brush(handle)
+        if handle ~= 0 and not brushes[handle] then
+            error("invalid d2d brush handle", 2)
+        end
+        brushes[handle] = nil
+    end
+
+    ---@deprecated Use [Painter:clear](lua://Painter:clear) instead.
+    function d2d.clear(r, g, b, a)
+        require_painter():clear({ r = r, g = g, b = b, a = a })
+    end
+
+    ---@deprecated Use [Painter:rect](lua://Painter:rect) and [Painter:fill](lua://Painter:fill) instead.
+    function d2d.fill_rectangle(x1, y1, x2, y2, brush)
+        with_path(function(p)
+            p:rect({ x = x1, y = y1, w = x2 - x1, h = y2 - y1 })
+            p:fill(require_brush(brush))
+        end)
+    end
+
+    ---@deprecated Use [Painter:rect](lua://Painter:rect) and [Painter:stroke](lua://Painter:stroke) instead.
+    function d2d.draw_rectangle(x1, y1, x2, y2, thickness, brush)
+        with_path(function(p)
+            p:rect({ x = x1, y = y1, w = x2 - x1, h = y2 - y1 })
+            p:stroke(require_brush(brush), { width = thickness })
+        end)
+    end
+
+    ---@deprecated Use [Painter:circle](lua://Painter:circle) and [Painter:fill](lua://Painter:fill) instead.
+    function d2d.fill_ellipse(x, y, radiusX, radiusY, brush)
+        with_path(function(p)
+            p:circle({ x = x - radiusX, y = y - radiusY, w = radiusX * 2, h = radiusY * 2 })
+            p:fill(require_brush(brush))
+        end)
+    end
+
+    ---@deprecated Use [Painter:circle](lua://Painter:circle) and [Painter:stroke](lua://Painter:stroke) instead.
+    function d2d.draw_ellipse(x, y, radiusX, radiusY, thickness, brush)
+        with_path(function(p)
+            p:circle({ x = x - radiusX, y = y - radiusY, w = radiusX * 2, h = radiusY * 2 })
+            p:stroke(require_brush(brush), { width = thickness })
+        end)
+    end
+
+    ---@deprecated Use [Painter:line](lua://Painter:line) and [Painter:stroke](lua://Painter:stroke) instead.
+    function d2d.draw_line(x1, y1, x2, y2, thickness, brush)
+        with_path(function(p)
+            p:line(x1, y1, x2, y2)
+            p:stroke(require_brush(brush), { width = thickness })
+        end)
+    end
+
+    ---@deprecated Use [Painter:text](lua://Painter:text) with [PainterTextStyleParams](lua://PainterTextStyleParams) instead.
+    function d2d.draw_text(x1, y1, x2, y2, text, fontname, fontsize, fontweight, fontstyle, horizalign, vertalign,
+                           options, brush)
+        local slant = fontstyle == 2 and "italic" or fontstyle == 1 and "oblique" or "normal"
+        local align_x = horizalign == 1 and "right" or horizalign == 2 and "center" or horizalign == 3 and "justify" or
+            "left"
+        local align_y = vertalign == 1 and "bottom" or vertalign == 2 and "center" or "top"
+        local clipped = ((options or 0) & 0x2) ~= 0
+        with_path(function(p)
+            p:text(text, { x = x1, y = y1, w = x2 - x1, h = y2 - y1 }, {
+                family = fontname,
+                size = fontsize,
+                weight = fontweight,
+                slant = slant,
+                align_x = align_x,
+                align_y = align_y,
+                overflow = clipped and "clip" or "visible",
+                clip = clipped,
+            })
+            p:fill(require_brush(brush or 0))
+        end)
+    end
+
+    ---@deprecated Use [painter.measure_text](lua://painter.measure_text) instead.
+    function d2d.get_text_size(text, fontname, fontsize, max_width, max_height)
+        local metrics = painter.measure_text(text, { family = fontname, size = fontsize }, {
+            w = max_width,
+            h = max_height,
+            wrap = "word",
+        })
+        return { width = math.ceil(metrics.w), height = math.ceil(metrics.h) }
+    end
+
+    ---@deprecated Use [Painter:save](lua://Painter:save) and [Painter:clip](lua://Painter:clip) instead.
+    function d2d.push_clip(x1, y1, x2, y2)
+        local p = require_painter()
+        p:save()
+        p:clip({ x = x1, y = y1, w = x2 - x1, h = y2 - y1 })
+    end
+
+    ---@deprecated Use [Painter:restore](lua://Painter:restore) instead.
+    function d2d.pop_clip()
+        require_painter():restore()
+    end
+
+    ---@deprecated Use [Painter:round_rect](lua://Painter:round_rect) and [Painter:fill](lua://Painter:fill) instead.
+    function d2d.fill_rounded_rectangle(x1, y1, x2, y2, radiusX, radiusY, brush)
+        with_path(function(p)
+            p:round_rect({ x = x1, y = y1, w = x2 - x1, h = y2 - y1 }, math.min(radiusX, radiusY))
+            p:fill(require_brush(brush))
+        end)
+    end
+
+    ---@deprecated Use [Painter:round_rect](lua://Painter:round_rect) and [Painter:stroke](lua://Painter:stroke) instead.
+    function d2d.draw_rounded_rectangle(x1, y1, x2, y2, radiusX, radiusY, thickness, brush)
+        with_path(function(p)
+            p:round_rect({ x = x1, y = y1, w = x2 - x1, h = y2 - y1 }, math.min(radiusX, radiusY))
+            p:stroke(require_brush(brush), { width = thickness })
+        end)
+    end
+
+    ---@deprecated There's no alternative to this function in the painter API.
+    function d2d.set_antialias_mode(_)
+    end
+
+    ---@deprecated There's no alternative to this function in the painter API.
+    function d2d.set_text_antialias_mode(_)
+    end
+
+    ---@deprecated Use [painter.load_image](lua://painter.load_image) instead.
+    function d2d.load_image(path)
+        local image, error_message = painter.load_image(path)
+        if not image then
+            return nil, error_message
+        end
+        local identifier = next_image
+        next_image = next_image + 1
+        images[identifier] = image
+        return identifier
+    end
+
+    ---@deprecated Use [PainterImage:close](lua://PainterImage:close) instead.
+    function d2d.free_image(identifier)
+        local image = require_image(identifier)
+        image:close()
+        images[identifier] = nil
+    end
+
+    ---@deprecated Use [PainterImage:paint](lua://PainterImage:paint) and [painter.new_image](lua://painter.new_image) instead.
+    function d2d.draw_to_image(width, height, callback)
+        local image = painter.new_image(math.max(1, width), math.max(1, height))
+        image:paint(function(p)
+            local previous = active_painter
+            active_painter = p
+            local ok, error_message = pcall(callback)
+            active_painter = previous
+            if not ok then
+                error(error_message, 0)
+            end
+        end)
+        local identifier = next_image
+        next_image = next_image + 1
+        images[identifier] = image
+        return identifier
+    end
+
+    ---@deprecated Use [Painter:image](lua://Painter:image) instead.
+    function d2d.draw_image2(params)
+        local image = require_image(params.identifier)
+        local destx2 = params.destx2 or params.destx1 + image.w
+        local desty2 = params.desty2 or params.desty1 + image.h
+        local srcx1 = params.srcx1 or 0
+        local srcy1 = params.srcy1 or 0
+        local srcx2 = params.srcx2 or srcx1 + image.w
+        local srcy2 = params.srcy2 or srcy1 + image.h
+        local options = {
+            source = { x = srcx1, y = srcy1, w = srcx2 - srcx1, h = srcy2 - srcy1 },
+            sampling = params.interpolation == 0 and "nearest" or "linear",
+        }
+        if params.color then
+            options.tint = { r = params.color.r, g = params.color.g, b = params.color.b, a = 1 }
+            options.opacity = params.color.a
+        end
+        local p = require_painter()
+        p:image(image, { x = params.destx1, y = params.desty1, w = destx2 - params.destx1, h = desty2 - params.desty1 },
+            options)
+    end
+
+    ---@deprecated Use [d2d.draw_image2](lua://d2d.draw_image2) instead.
+    ---@param destx1 integer
+    ---@param desty1 integer
+    ---@param destx2 integer
+    ---@param desty2 integer
+    ---@param srcx1 integer
+    ---@param srcy1 integer
+    ---@param srcx2 integer
+    ---@param srcy2 integer
+    ---@param opacity number
+    ---@param interpolation integer 0: nearest neighbor, 1: linear
+    ---@param identifier number
+    ---@return nil
+    function d2d.draw_image(destx1, desty1, destx2, desty2, srcx1, srcy1, srcx2,
+                            srcy2, opacity, interpolation, identifier)
+        d2d.draw_image2({
+            identifier = identifier,
+            destx1 = destx1,
+            desty1 = desty1,
+            destx2 = destx2,
+            desty2 = desty2,
+            srcx1 = srcx1,
+            srcy1 = srcy1,
+            srcx2 = srcx2,
+            srcy2 = srcy2,
+            color = opacity == 1 and nil or { r = 1, g = 1, b = 1, a = opacity },
+            interpolation = interpolation,
+        })
+    end
+
+    ---@deprecated Use [PainterImage.w](lua://PainterImage.w) and [PainterImage.h](lua://PainterImage.h) instead.
+    function d2d.get_image_info(identifier)
+        local image = require_image(identifier)
+        return { width = image.w, height = image.h }
+    end
+end

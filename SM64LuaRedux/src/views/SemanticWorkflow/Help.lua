@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = dofile(views_path .. "SemanticWorkflow/SharedUIDs.lua")
@@ -23,7 +23,7 @@ return {
                         uid = UID.ToggleHelp,
                         rectangle = button_position,
                         text = '[icon:navigate_back]',
-                        tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_EXIT_TOOL_TIP'),
+                        tooltip = Locales.msg.SEMANTIC_WORKFLOW_HELP_EXIT_TOOL_TIP,
                         styler_mixin = { icon_size = 12 },
                     }
                 ) then
@@ -35,30 +35,33 @@ return {
                 rectangle = grid_rect(0, 0.1, 8, 1),
                 text = title,
                 color = foreground_color,
-                font_size = theme.font_size * 1.2 * Drawing.scale,
+                font_size = theme.font_size * 1.2,
                 font_name = theme.font_name,
-                align_x = BreitbandGraphics.alignment.start,
-                align_y = BreitbandGraphics.alignment.start,
+                align_x = ugui.alignment.start,
+                align_y = ugui.alignment.start,
+                wrap = true,
             })
             ugui.label({
                 uid = UID.HelpPageHeading,
                 rectangle = grid_rect(0, 0.666, 8, 1),
                 text = pages[page]['HEADING'],
+                wrap = true,
                 color = foreground_color,
-                font_size = theme.font_size * 2 * Drawing.scale,
+                font_size = theme.font_size * 2,
                 font_name = theme.font_name,
-                align_x = BreitbandGraphics.alignment.start,
-                align_y = BreitbandGraphics.alignment.start,
+                align_x = ugui.alignment.start,
+                align_y = ugui.alignment.start,
             })
             ugui.label({
                 uid = UID.HelpPageText,
                 rectangle = grid_rect(0, 1.8, 8, 1),
                 text = pages[page]['TEXT'],
+                wrap = true,
                 color = foreground_color,
-                font_size = theme.font_size * Drawing.scale,
+                font_size = theme.font_size,
                 font_name = theme.font_name,
-                align_x = BreitbandGraphics.alignment.start,
-                align_y = BreitbandGraphics.alignment.start,
+                align_x = ugui.alignment.start,
+                align_y = ugui.alignment.start,
             })
 
             if ugui.button(
@@ -67,7 +70,7 @@ return {
                         rectangle = grid_rect(6, top, 0.5, 1),
                         text = '[icon:previous_page]',
                         is_enabled = page > 1,
-                        tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_PREV_PAGE'),
+                        tooltip = Locales.msg.SEMANTIC_WORKFLOW_HELP_PREV_PAGE,
                         styler_mixin = { icon_size = 12 },
                     }
                 ) then
@@ -80,7 +83,7 @@ return {
                         rectangle = grid_rect(6.5, top, 0.5, 1),
                         text = '[icon:next_page]',
                         is_enabled = page < #pages,
-                        tooltip = Locales.str('SEMANTIC_WORKFLOW_HELP_NEXT_PAGE'),
+                        tooltip = Locales.msg.SEMANTIC_WORKFLOW_HELP_NEXT_PAGE,
                         styler_mixin = { icon_size = 12 },
                     }
                 ) then

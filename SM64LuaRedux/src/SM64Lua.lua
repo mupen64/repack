@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 folder = debug.getinfo(1).source:sub(2):match('(.*\\)')
@@ -9,30 +9,19 @@ styles_path = folder .. 'res\\styles\\'
 locales_path = folder .. 'res\\lang\\'
 views_path = folder .. 'views\\'
 core_path = folder .. 'core\\'
-lib_path = folder .. '..\\lib\\'
+vendor_path = folder .. '..\\vendor\\'
 processors_path = folder .. 'processors\\'
 
 ---@module 'breitbandgraphics-amalgamated'
-BreitbandGraphics = dofile(lib_path .. 'breitbandgraphics-amalgamated.lua')
+BreitbandGraphics = dofile(vendor_path .. 'breitbandgraphics-amalgamated.lua')
 
 ---@module 'ugui-amalgamated'
-ugui = dofile(lib_path .. 'ugui-amalgamated.lua')
+ugui = dofile(vendor_path .. 'ugui-amalgamated.lua')
 
 ---@module 'linq'
-lualinq = dofile(lib_path .. 'linq.lua')
+lualinq = dofile(vendor_path .. 'linq.lua')
 
-json = dofile(lib_path .. 'json.lua')
-
-ugui.STATIC_ENV = {
-    clipboard = {
-        get = function()
-            return clipboard.get('text')
-        end,
-        set = function(text)
-            clipboard.set('text', text)
-        end,
-    },
-}
+json = dofile(vendor_path .. 'json.lua')
 
 dofile(styles_path .. 'base_style.lua')
 dofile(core_path .. 'UIDProvider.lua')
@@ -49,7 +38,7 @@ dofile(core_path .. 'MoreMaths.lua')
 dofile(core_path .. 'WorldVisualizer.lua')
 dofile(core_path .. 'MiniVisualizer.lua')
 dofile(core_path .. 'Timer.lua')
-dofile(core_path .. 'Ghost.lua')
+dofile(core_path .. 'Ghosts.lua')
 dofile(core_path .. 'VarWatch.lua')
 dofile(core_path .. 'Styles.lua')
 dofile(core_path .. 'Locales.lua')
@@ -58,6 +47,7 @@ dofile(core_path .. 'Dumping.lua')
 Validators = dofile(core_path .. 'Validators.lua')
 dofile(core_path .. 'Actions.lua')
 Addresses = dofile(core_path .. 'Addresses.lua')
+Mapping = dofile(core_path .. 'Mapping.lua')
 
 apply_math_shim()
 
@@ -75,6 +65,7 @@ local views = {
     dofile(views_path .. 'Tools.lua'),
     dofile(views_path .. 'Timer.lua'),
     dofile(views_path .. 'Visualizer.lua'),
+    dofile(views_path .. 'GhostTab/Main.lua'),
 }
 
 local semantic_workflow = dofile(processors_path .. 'SemanticWorkflow.lua')
@@ -90,16 +81,14 @@ local processors = {
 Notifications = dofile(views_path .. 'Notifications.lua')
 
 ugui_environment = {}
-local mouse_wheel = 0
+local stored_mouse_events = {}
 
 -- Flag keeping track of whether atinput has fired for one time
 local first_input = true
 
-local reset_preset_menu_open = false
-local last_rmb_down_position = { x = 0, y = 0 }
 local keys = input.get()
-local last_keys = input.get()
-local defer_queue = {}
+local defer_draw_queue = {}
+local defer_before_navbar_queue = {}
 local key_events = {}
 local next_vi_signal = false
 G_KEYS = {}
@@ -107,35 +96,53 @@ G_KEYS = {}
 local UID = UIDProvider.allocate_once('SM64Lua', function(enum_next)
     return {
         TabIndex = enum_next(),
-        ResetPreset = enum_next(),
         PresetIndex = enum_next(),
+        ViewPanels = enum_next(#views),
     }
 end)
 
-local function execute_defer_queue()
-    for i = 1, #defer_queue, 1 do
-        defer_queue[i]()
+function defer_draw(fn)
+    defer_draw_queue[#defer_draw_queue + 1] = fn
+end
+
+function defer_before_navbar(fn)
+    defer_before_navbar_queue[#defer_before_navbar_queue + 1] = fn
+end
+
+local function execute_defer_draw_queue()
+    for i = 1, #defer_draw_queue, 1 do
+        defer_draw_queue[i]()
     end
-    defer_queue = {}
+    defer_draw_queue = {}
+end
+
+local function execute_defer_before_navbar_queue()
+    for i = 1, #defer_before_navbar_queue, 1 do
+        defer_before_navbar_queue[i]()
+    end
+    defer_before_navbar_queue = {}
 end
 
 is_keyboard_captured = false
 
---HACK: We want to know if ugui is capturing keyboard input on a control that cares about inputs.
+-- HACK: Do not consume wheel input while a control owns the mouse or a numberbox owns the keyboard.
+function can_scroll()
+    if ugui.internal.mouse_captured_control ~= nil then
+        return false
+    end
+
+    local keyboard_captured_control = ugui.internal.keyboard_captured_control
+    return keyboard_captured_control == nil or
+        ugui.internal.control_types[keyboard_captured_control] ~= 'numberbox'
+end
+
+-- HACK: We want to know if ugui is capturing keyboard input on a control that cares about inputs.
 function get_is_keyboard_captured()
     if ugui.internal.keyboard_captured_control == nil then
         return false
     end
 
-    ---@type SceneEntry?
-    local keyboard_captured_control = nil
-    for i = 1, #ugui.internal.scene, 1 do
-        local entry = ugui.internal.scene[i]
-        if entry.control.uid == ugui.internal.keyboard_captured_control then
-            keyboard_captured_control = entry
-        end
-    end
-
+    local keyboard_captured_control = ugui.internal.find_node(ugui.internal.keyboard_captured_control)
     if not keyboard_captured_control then
         return false
     end
@@ -177,7 +184,7 @@ local function at_input()
     end
 
     Joypad.send()
-    Ghost.update()
+    Ghosts.update()
     Dumping.update()
 end
 
@@ -211,55 +218,30 @@ local function draw_navbar()
 
     local preset_picker_rect = grid_rect(5.5, 16, 2.5, 1)
 
-    if reset_preset_menu_open then
-        local result = ugui.menu({
-            uid = UID.ResetPreset,
-            rectangle = ugui.internal.deep_clone(last_rmb_down_position),
-            items = {
-                {
-                    text = Locales.str('GENERIC_RESET'),
-                    callback = function()
-                        action.invoke(ACTION_RESET_PRESET)
-                    end,
-                },
-                {
-                    text = Locales.str('PRESET_CONTEXT_MENU_DELETE_ALL'),
-                    callback = function()
-                        action.invoke(ACTION_DELETE_ALL_PRESETS)
-                    end,
-                },
-            },
-        }).primary
-
-        if result.dismissed then
-            reset_preset_menu_open = false
-        else
-            if result.item then
-                result.item.callback()
-                reset_preset_menu_open = false
-            end
-        end
-    end
-
-    if (keys.rightclick and not last_keys.rightclick)
-        and BreitbandGraphics.is_point_inside_rectangle(ugui.internal.environment.mouse_position, preset_picker_rect)
-        and not Settings.hotkeys_assigning then
-        reset_preset_menu_open = true
-    end
-
     local preset_items = lualinq.select(Presets.persistent.presets, function(_, i)
-        return Locales.str('PRESET') .. i
+        return Locales.msg.PRESET .. i
     end)
-    preset_items[#preset_items + 1] = Locales.str('PRESET') .. (#Presets.persistent.presets + 1)
+    preset_items[#preset_items + 1] = Locales.msg.PRESET .. (#Presets.persistent.presets + 1)
 
-    local preset_index = Presets.persistent.current_index
-    preset_index = ugui.carrousel_button({
+    local preset_context_menu = {
+        { text = Locales.msg.GENERIC_RESET },
+        { text = Locales.msg.PRESET_CONTEXT_MENU_DELETE_ALL },
+    }
+    local preset_index, preset_meta = ugui.carrousel_button({
         uid = UID.PresetIndex,
         rectangle = preset_picker_rect,
         is_enabled = not Settings.hotkeys_assigning,
         items = preset_items,
-        selected_index = preset_index,
+        selected_index = Presets.persistent.current_index,
+        context_menu = preset_context_menu,
     })
+
+    local context_menu_result = preset_meta.context_menu_result
+    if context_menu_result and context_menu_result.item == preset_context_menu[1] then
+        action.invoke(ACTION_RESET_PRESET)
+    elseif context_menu_result and context_menu_result.item == preset_context_menu[2] then
+        action.invoke(ACTION_DELETE_ALL_PRESETS)
+    end
 
     if preset_index ~= Presets.persistent.current_index then
         Presets.change_index(preset_index)
@@ -267,23 +249,22 @@ local function draw_navbar()
     end
 end
 
+local previous_tab_index = Settings.tab_index
+local view_transition_x = -5
+local view_out_transition = ugui.transition.fly({ x = 5, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
+
 local function atdrawd2d()
+    ugui.PREFERS_REDUCED_MOTION = Settings.animations == 'disabled'
+    view_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+    Styles.refresh_system_style()
     d2d.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
 
     if d2d and d2d.clear then
         d2d.clear(0, 0, 0, 0)
     end
 
-    last_keys = ugui.internal.deep_clone(keys)
     keys = input.get()
     G_KEYS = ugui.internal.deep_clone(keys)
-
-    if keys.rightclick and not last_keys.rightclick then
-        last_rmb_down_position = {
-            x = keys.xmouse,
-            y = keys.ymouse,
-        }
-    end
 
     -- HACK: We turn off hotkeys while a control is capturing inputs
     action.lock_hotkeys(Settings.lock_hotkeys_when_control_active and is_keyboard_captured or false)
@@ -297,20 +278,23 @@ local function atdrawd2d()
             x = keys.xmouse,
             y = keys.ymouse,
         },
-        wheel = mouse_wheel,
+        mouse_events = stored_mouse_events,
         is_primary_down = keys.leftclick and focused,
         key_events = key_events,
+        shift = keys.shift,
         window_size = {
             x = Drawing.size.width,
             y = Drawing.size.height - 23,
         },
+        scale = Drawing.scale,
     }
     ugui.begin_frame(ugui_environment)
 
-    mouse_wheel = 0
-
     WorldVisualizer.draw()
     MiniVisualizer.draw()
+    GhostTab_draw_ghost_overlay(
+        views[Settings.tab_index].name() == Locales.msg.SEMANTIC_WORKFLOW_TAB_NAME and 6 or 0
+    )
     Notifications.draw()
 
     BreitbandGraphics.fill_rectangle({
@@ -324,16 +308,32 @@ local function atdrawd2d()
         local one_cell_height = grid_rect(0, 0, 0, 1.25).height
         Drawing.push_offset(0, one_cell_height / 2)
     end
-    views[Settings.tab_index].draw()
-    Drawing.pop_offset()
+    if Settings.tab_index ~= previous_tab_index then
+        local forward_distance = (Settings.tab_index - previous_tab_index) % #views
+        view_transition_x = forward_distance <= #views / 2 and 10 or -10
+        view_out_transition.tick = ugui.transition.fly({ x = -view_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+        previous_tab_index = Settings.tab_index
+    end
 
+    ugui.panel({
+        uid = UID.ViewPanels + Settings.tab_index - 1,
+        rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
+        in_transition = ugui.transition.fly({ x = view_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+        out_transition = view_out_transition,
+    }, function()
+        views[Settings.tab_index].draw()
+        Drawing.pop_offset()
+    end)
+
+    execute_defer_before_navbar_queue()
     draw_navbar()
 
     is_keyboard_captured = get_is_keyboard_captured()
     ugui.end_frame()
+    stored_mouse_events = {}
     key_events = {}
 
-    execute_defer_queue()
+    execute_defer_draw_queue()
 end
 
 local function at_loadstate()
@@ -353,16 +353,9 @@ emu.atstop(function()
     BreitbandGraphics.free()
     ugui.free()
 end)
-emu.atwindowmessage(function(hwnd, msg_id, wparam, lparam)
-    if msg_id == 522 then                         -- WM_MOUSEWHEEL
-        -- high word (most significant 16 bits) is scroll rotation in multiples of WHEEL_DELTA (120)
-        local scroll = math.floor(wparam / 65536) --(wparam & 0xFFFF0000) >> 16
-        if scroll == 120 then
-            mouse_wheel = 1
-        elseif scroll == 65416 then -- 65536 - 120
-            mouse_wheel = -1
-        end
-    end
+
+emu.atmouse(function(args)
+    stored_mouse_events[#stored_mouse_events + 1] = args
 end)
 
 emu.atkey(function(args)

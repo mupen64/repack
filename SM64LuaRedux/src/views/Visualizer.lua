@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 local UID = UIDProvider.allocate_once('Visualizer', function(enum_next)
@@ -9,7 +9,7 @@ local UID = UIDProvider.allocate_once('Visualizer', function(enum_next)
         Joystick = enum_next(),
         JoystickX = enum_next(),
         JoystickY = enum_next(),
-        Labels = enum_next(100),
+        Labels = enum_next(UIDProvider.unknown),
     }
 end)
 
@@ -27,7 +27,7 @@ local SEPARATOR_ALPHA <const> = 0.1
 local MIN_FONT_FACTOR <const> = 0.5
 
 return {
-    name = function() return Locales.str('VISUALIZER_TAB_NAME') end,
+    name = function() return Locales.msg.VISUALIZER_TAB_NAME end,
     draw = function()
         local text_color = Drawing.foreground_color()
         local background_color = Styles.theme().background_color
@@ -36,12 +36,12 @@ return {
         local FONT_BIG <const> = ugui.standard_styler.params.font_size * 1.5
 
         local function draw_button(pressed, active_color, text, shape, origin_x, origin_y, x, y, w, h, font)
-            local rect = {
-                x = origin_x + x * Drawing.scale,
-                y = origin_y + y * Drawing.scale,
-                width = w * Drawing.scale,
-                height = h * Drawing.scale,
-            }
+            local rect = Drawing.map_rect({
+                x = origin_x + x,
+                y = origin_y + y,
+                width = w,
+                height = h,
+            })
 
             local bg_color = background_color
 
@@ -63,7 +63,7 @@ return {
                 text = text,
                 rectangle = rect,
                 font_name = font or ugui.standard_styler.params.monospace_font_name,
-                font_size = FONT_BIG,
+                font_size = FONT_BIG * Drawing.scale,
                 color = Drawing.foreground_color_for(bg_color),
             })
 
@@ -90,7 +90,7 @@ return {
                 color = text_color,
                 font_size = FONT_SMALL,
                 font_name = ugui.standard_styler.params.monospace_font_name,
-                align_x = BreitbandGraphics.alignment.start,
+                align_x = ugui.alignment.start,
             })
         end
 
@@ -112,46 +112,46 @@ return {
         draw_button(Joypad.input.Cdown, '#FFFF00', '6', 'ellipse', x, y, 135, 68, 21, 21, 'Marlett')
 
         local rc2 = grid_rect(0.1, 7, 0, 0)
-        local available_width = (Drawing.size.width - Drawing.initial_size.width) -
-            (rc2.x - Drawing.initial_size.width) * 2
+        local available_width = (Drawing.size.width - Drawing.initial_size.width) / Drawing.scale -
+            (rc2.x - Drawing.initial_size.width / Drawing.scale) * 2
 
         y = rc2.y
 
-        local function place_entry(uid, label, value, size)
+        local function place_entry(uid, label, value, size, line_height)
             ugui.label({
                 uid = uid,
                 rectangle = {
                     x = rc2.x,
-                    y = y,
+                    y = y - line_height / 2,
                     width = available_width,
-                    height = 0,
+                    height = line_height,
                 },
                 text = label,
                 color = text_color,
                 font_size = size,
                 font_name = ugui.standard_styler.params.monospace_font_name,
-                align_x = BreitbandGraphics.alignment.start,
+                align_x = ugui.alignment.start,
             })
 
             ugui.label({
                 uid = uid + 1,
                 rectangle = {
                     x = rc2.x,
-                    y = y,
+                    y = y - line_height / 2,
                     width = available_width,
-                    height = 0,
+                    height = line_height,
                 },
                 text = value,
                 color = text_color,
                 font_size = size,
                 font_name = ugui.standard_styler.params.monospace_font_name,
-                align_x = BreitbandGraphics.alignment['end'],
+                align_x = ugui.alignment['end'],
             })
             y = y + size + ENTRY_GAP
             return uid + 2
         end
 
-        local SEPARATOR_HEIGHT <const> = 8 * Drawing.scale
+        local SEPARATOR_HEIGHT <const> = 8
 
         ---@param prev_center number The `y` the previous entry was centered on.
         ---@param prev_line_height number The previous entry's rendered line height.
@@ -166,8 +166,8 @@ return {
 
             local line_y = math.floor((gap_top + gap_bottom) / 2) + 0.5
             BreitbandGraphics.draw_line(
-                { x = math.floor(rc2.x), y = line_y },
-                { x = math.floor(rc2.x + available_width), y = line_y },
+                Drawing.map_point({ x = math.floor(rc2.x), y = line_y }),
+                Drawing.map_point({ x = math.floor(rc2.x + available_width), y = line_y }),
                 separator_color, 1)
 
             y = next_center
@@ -207,7 +207,8 @@ return {
             fixed_height = fixed_height + ENTRY_GAP
         end
 
-        local bottom = Settings.navbar_visible and grid_rect(0, 16, 0, 0).y or Drawing.size.height
+        local bottom = Settings.navbar_visible and grid_rect(0, 16, 0, 0).y or
+            ugui.internal.environment.window_size.y
         local available_height = bottom - rc2.y - ENTRY_GAP
 
         local factor = 1
@@ -237,7 +238,7 @@ return {
             prev_center = y
             prev_line_height = line_height
 
-            current_uid = place_entry(current_uid, entry.label, entry.value, size)
+            current_uid = place_entry(current_uid, entry.label, entry.value, size, line_height)
         end
     end,
 }

@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 Locales = {}
@@ -34,12 +34,35 @@ Locales = {}
 ---@field public ATAN_STRAIN string
 ---@field public ATAN_STRAIN_REV string
 ---@field public MAG_RESET string
----@field public MAG_HI string
+---@field public DUSTLESS_WALK string
 ---@field public SPDKICK string
+---@field public TAS_MATCH_YAW_TOOLTIP string
+---@field public TAS_REVERSE_YAW_TOOLTIP string
+---@field public TAS_MATCH_ANGLE_TOOLTIP string
+---@field public TAS_GOAL_ANGLE_TOOLTIP string
+---@field public TAS_DYAW_TOOLTIP string
+---@field public TAS_STRAIN_LEFT_TOOLTIP string
+---@field public TAS_STRAIN_RIGHT_TOOLTIP string
+---@field public TAS_D99_TOOLTIP string
+---@field public TAS_D99_ALWAYS_TOOLTIP string
+---@field public TAS_ATAN_STRAIN_TOOLTIP string
+---@field public TAS_ATAN_STRAIN_REV_TOOLTIP string
+---@field public TAS_ATAN_EXP_TOOLTIP string
+---@field public TAS_ATAN_R_TOOLTIP string
+---@field public TAS_ATAN_D_TOOLTIP string
+---@field public TAS_ATAN_N_TOOLTIP string
+---@field public TAS_ATAN_S_TOOLTIP string
+---@field public TAS_MAGNITUDE_TOOLTIP string
+---@field public TAS_MAG_RESET_TOOLTIP string
+---@field public TAS_DUSTLESS_WALK_TOOLTIP string
+---@field public TAS_SPDKICK_TOOLTIP string
 ---@field public FRAMEWALK string
 ---@field public SWIM string
 ---@field public YES string
 ---@field public NO string
+---@field public SEMANTIC_WORKFLOW_PROJECT_TAB_NAME string
+---@field public SEMANTIC_WORKFLOW_INPUTS_TAB_NAME string
+---@field public SEMANTIC_WORKFLOW_PREFERENCES_TAB_NAME string
 ---@field public SEMANTIC_WORKFLOW_HELP_HEADER_TITLE string
 ---@field public SEMANTIC_WORKFLOW_HELP_SHOW_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_HELP_EXIT_TOOL_TIP string
@@ -63,6 +86,10 @@ Locales = {}
 ---@field public SEMANTIC_WORKFLOW_CONTROL_SPDKICK string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_FILE_VERSION string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_NO_SHEETS_AVAILABLE string
+---@field public SEMANTIC_WORKFLOW_DUPLICATE_SHEET string
+---@field public SEMANTIC_WORKFLOW_PROJECT_BASE_SHEET_TOOL_TIP string
+---@field public SEMANTIC_WORKFLOW_PROJECT_NO_BASE_SHEET_TOOL_TIP string
+---@field public SEMANTIC_WORKFLOW_PROJECT_SET_BASE_SHEET_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_NEW string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_NEW_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_PROJECT_OPEN string
@@ -94,6 +121,8 @@ Locales = {}
 ---@field public SEMANTIC_WORKFLOW_INPUTS_PREPEND_INPUT_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_APPEND_INPUT_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_DELETE_INPUT_TOOL_TIP string
+---@field public SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_1 string
+---@field public SEMANTIC_WORKFLOW_INPUTS_TERMINATION_TOOL_TIP_2 string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_TIMEOUT string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_TIMEOUT_TOOL_TIP string
 ---@field public SEMANTIC_WORKFLOW_INPUTS_END_ACTION string
@@ -110,9 +139,21 @@ Locales = {}
 ---@field public SETTINGS_INTERACTION_TAB_NAME string
 ---@field public SETTINGS_VARWATCH_TAB_NAME string
 ---@field public SETTINGS_MEMORY_TAB_NAME string
+---@field public SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT string
+---@field public SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE string
+---@field public SETTINGS_INTERACTION_MANUAL_ON_JOYSTICK_INTERACT_TOOLTIP string
+---@field public SETTINGS_INTERACTION_LOCK_HOTKEYS_WHEN_CONTROL_ACTIVE_TOOLTIP string
 ---@field public SETTINGS_VISUALS_STYLE string
+---@field public SETTINGS_VISUALS_LIGHT_STYLE string
+---@field public SETTINGS_VISUALS_DARK_STYLE string
 ---@field public SETTINGS_VISUALS_LOCALE string
+---@field public SETTINGS_VISUALS_ANIMATIONS string
+---@field public SETTINGS_VISUALS_ANIMATIONS_SYSTEM string
+---@field public SETTINGS_VISUALS_ANIMATIONS_ENABLED string
+---@field public SETTINGS_VISUALS_ANIMATIONS_FAST string
+---@field public SETTINGS_VISUALS_ANIMATIONS_DISABLED string
 ---@field public SETTINGS_VISUALS_NOTIFICATIONS string
+---@field public SETTINGS_VISUALS_NOTIFICATIONS_TOOLTIP string
 ---@field public SETTINGS_VISUALS_NOTIFICATIONS_BUBBLE string
 ---@field public SETTINGS_VISUALS_NOTIFICATIONS_CONSOLE string
 ---@field public SETTINGS_VISUALS_FF_FPS string
@@ -122,12 +163,20 @@ Locales = {}
 ---@field public SETTINGS_VARWATCH_DISABLED string
 ---@field public SETTINGS_VARWATCH_HIDE string
 ---@field public SETTINGS_VARWATCH_ANGLE_FORMAT string
+---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_TOOLTIP string
 ---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_SHORT string
 ---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_DEGREE string
+---@field public SETTINGS_VARWATCH_ANGLE_FORMAT_HAU string
 ---@field public SETTINGS_VARWATCH_DECIMAL_POINTS string
+---@field public SETTINGS_VARWATCH_DECIMAL_POINTS_TOOLTIP string
 ---@field public SETTINGS_MEMORY_FILE_SELECT string
----@field public SETTINGS_MEMORY_DETECT_NOW string
+---@field public SETTINGS_MEMORY_FILE_SELECT_TOOLTIP string
+---@field public SETTINGS_MEMORY_REGION_TOOLTIP string
 ---@field public SETTINGS_MEMORY_DETECT_ON_START string
+---@field public SETTINGS_MEMORY_DETECT_ON_START_TOOLTIP string
+---@field public SETTINGS_MEMORY_DETECT_NOW string
+---@field public SETTINGS_MEMORY_REGION string
+---@field public SETTINGS_MEMORY_DETECT_NOW_TOOLTIP string
 ---@field public SETTINGS_HOTKEYS_NOTHING string
 ---@field public SETTINGS_HOTKEYS_CONFIRMATION string
 ---@field public SETTINGS_HOTKEYS_CLEAR string
@@ -139,24 +188,118 @@ Locales = {}
 ---@field public TOOLS_RNG string
 ---@field public TOOLS_RNG_LOCK string
 ---@field public TOOLS_RNG_USE_INDEX string
+---@field public TOOLS_RNG_LOCK_TOOLTIP string
+---@field public TOOLS_RNG_VALUE_TOOLTIP string
+---@field public TOOLS_RNG_USE_INDEX_TOOLTIP string
 ---@field public TOOLS_DUMPING string
----@field public TOOLS_GHOST string
----@field public TOOLS_GHOST_START string
----@field public TOOLS_GHOST_STOP string
----@field public TOOLS_GHOST_START_RECORDING_FAILED string
----@field public TOOLS_GHOST_STOP_RECORDING_FAILED string
+---@field public TOOLS_DUMPING_TOOLTIP string
 ---@field public TOOLS_TRACKERS string
 ---@field public TOOLS_OVERLAYS string
 ---@field public TOOLS_AUTOMATION string
 ---@field public TOOLS_MOVED_DIST string
+---@field public TOOLS_MOVED_DIST_TOOLTIP string
+---@field public TOOLS_MOVED_DIST_X_TOOLTIP string
+---@field public TOOLS_MOVED_DIST_Y_TOOLTIP string
+---@field public TOOLS_MOVED_DIST_Z_TOOLTIP string
 ---@field public TOOLS_MINI_OVERLAY string
+---@field public TOOLS_MINI_OVERLAY_TOOLTIP string
 ---@field public TOOLS_AUTO_FIRSTIES string
+---@field public TOOLS_AUTO_FIRSTIES_TOOLTIP string
 ---@field public TOOLS_WORLD_VISUALIZER string
+---@field public TOOLS_WORLD_VISUALIZER_TOOLTIP string
+---@field public FRAMEWALK_TOOLTIP string
+---@field public SWIM_TOOLTIP string
 ---@field public TIMER_START string
 ---@field public TIMER_STOP string
 ---@field public TIMER_RESET string
 ---@field public TIMER_MANUAL string
 ---@field public TIMER_AUTO string
+---@field public TIMER_START_TOOLTIP string
+---@field public TIMER_STOP_TOOLTIP string
+---@field public TIMER_RESET_TOOLTIP string
+---@field public TIMER_MODE_TOOLTIP string
+---@field public GHOST_TAB_NAME string
+---@field public GHOST_RECORDING_TAB_NAME string
+---@field public GHOST_PLAYBACK_TAB_NAME string
+---@field public GHOST_STATUS_IDLE string
+---@field public GHOST_STATUS_RECORDING string
+---@field public GHOST_STATUS_SAVED string
+---@field public GHOST_RECORD_MARIO string
+---@field public GHOST_RECORD_MARIO_TOOLTIP string
+---@field public GHOST_RECORD_OBJECT string
+---@field public GHOST_RECORD_OBJECT_TOOLTIP string
+---@field public GHOST_OBJECT_LABEL string
+---@field public GHOST_ADDRESS_LABEL string
+---@field public GHOST_RECORD_OBJECT_BY_NAME string
+---@field public GHOST_RECORD_OBJECT_BY_NAME_TOOLTIP string
+---@field public GHOST_OBJECT_LIST_TOOLTIP string
+---@field public GHOST_INVALID_OBJECT string
+---@field public GHOST_OBJECT_ADDRESS_TOOLTIP string
+---@field public GHOST_PATH_TOOLTIP string
+---@field public GHOST_BROWSE_TOOLTIP string
+---@field public GHOST_START string
+---@field public GHOST_STOP string
+---@field public GHOST_RECORD_TOOLTIP string
+---@field public GHOST_START_RECORDING_FAILED string
+---@field public GHOST_STOP_RECORDING_FAILED string
+---@field public GHOST_STATUS string
+---@field public GHOST_DISABLED string
+---@field public GHOST_UNSUPPORTED string
+---@field public GHOST_ENABLED string
+---@field public GHOST_NOT_CONTROLLED string
+---@field public GHOST_ENABLE_HACK string
+---@field public GHOST_TAKE_CONTROL string
+---@field public GHOST_LIST string
+---@field public GHOST_ADD string
+---@field public GHOST_LOAD_FAILED string
+---@field public GHOST_REMOVE string
+---@field public GHOST_TIMER_START string
+---@field public GHOST_TIMER_START_TOOLTIP string
+---@field public GHOST_TIMER_START_DECREMENT_TOOLTIP string
+---@field public GHOST_TIMER_START_INCREMENT_TOOLTIP string
+---@field public GHOST_GRAPHICS string
+---@field public GHOST_TRANSPARENT string
+---@field public GHOST_TRANSPARENT_TOOLTIP string
+---@field public GHOST_COLOR string
+---@field public GHOST_COLOR_TOOLTIP string
+---@field public GHOST_COLOR_PICKER_TOOLTIP string
+---@field public GHOST_COLOR_PICKER_OK string
+---@field public GHOST_COLOR_PICKER_OK_TOOLTIP string
+---@field public GHOST_COLOR_PICKER_CANCEL string
+---@field public GHOST_COLOR_PICKER_CANCEL_TOOLTIP string
+---@field public GHOST_ENABLE_HACK_TOOLTIP string
+---@field public GHOST_DISABLE_HACK_TOOLTIP string
+---@field public GHOST_TAKE_CONTROL_TOOLTIP string
+---@field public GHOST_ENABLE_GHOST string
+---@field public GHOST_DISABLE_GHOST string
+---@field public GHOST_ENABLE_GHOST_TOOLTIP string
+---@field public GHOST_FILE string
+---@field public GHOST_NAME_TOOLTIP string
+---@field public GHOST_SAVE_AS string
+---@field public GHOST_SAVE_AS_TOOLTIP string
+---@field public GHOST_SAVE_FAILED string
+---@field public GHOST_SETTINGS_AUTO_LOAD string
+---@field public GHOST_SETTINGS_AUTO_LOAD_TOOLTIP string
+---@field public GHOST_SETTINGS_TRANSPARENT_DEFAULT string
+---@field public GHOST_SETTINGS_TRANSPARENT_DEFAULT_TOOLTIP string
+---@field public GHOST_SETTINGS_BASE_OFFSET string
+---@field public GHOST_SETTINGS_BASE_OFFSET_TOOLTIP string
+---@field public GHOST_PLAYBACK_WARNING string
+---@field public GHOST_PLAYBACK_WARNING_ACCEPT string
+---@field public GHOST_SETTINGS_SHOW_PLAYBACK_WARNING string
+---@field public GHOST_SETTINGS_SHOW_PLAYBACK_WARNING_TOOLTIP string
+---@field public GHOST_SETTINGS_OVERLAY_DATA string
+---@field public GHOST_SETTINGS_OVERLAY_DATA_TOOLTIP string
+---@field public GHOST_SETTINGS_DISABLE_BODY_MOVEMENT string
+---@field public GHOST_SETTINGS_DISABLE_BODY_MOVEMENT_TOOLTIP string
+---@field public GHOST_SETTINGS_HIGHLIGHT_COLOR string
+---@field public GHOST_SETTINGS_HIGHLIGHT_COLOR_TOOLTIP string
+---@field public GHOST_SETTINGS_RECORD_VARIABLES string
+---@field public GHOST_SETTINGS_RECORD_VARIABLE_TOOLTIP string
+---@field public GHOST_DATA_ROLL string
+---@field public GHOST_DATA_ANIMATION string
+---@field public GHOST_DATA_ANIMATION_TIMER string
+---@field public GHOST_DATA_GRAPHICS string
 ---@field public VARWATCH_FACING_YAW_LABEL string
 ---@field public VARWATCH_FACING_YAW string
 ---@field public VARWATCH_INTENDED_YAW_LABEL string
@@ -207,14 +350,13 @@ Locales.names = function()
     return lualinq.select_key(locales, 'name')
 end
 
----Gets a string from the current locale.
----@param id string # The identifier of the string to query.
----@return string # The localized string, or the identifier if not found.
----@nodiscard
-Locales.str = function(id)
-    local val = locales[Settings.locale_index][id]
-    return val or id
-end
+---@type Locale
+Locales.msg = setmetatable({}, {
+    __index = function(_, id)
+        return locales[Settings.locale_index][id] or id
+    end,
+})
+
 
 ---Gets the raw locale table for the current locale.
 ---@return Locale

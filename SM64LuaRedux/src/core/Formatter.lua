@@ -1,7 +1,7 @@
 --
--- Copyright (c) 2025, Mupen64 maintainers.
+-- Copyright (c) 2026, Mupen64 Organization (https://github.com/mupen64)
 --
--- SPDX-License-Identifier: GPL-2.0-or-later
+-- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
 Formatter = {}
@@ -10,7 +10,9 @@ Formatter = {}
 ---@param value number The value to be formatted
 ---@return string The value's string representation
 Formatter.angle = function(value)
-    if Settings.format_angles_degrees then
+    if Settings.format_angles_hau then
+        return tostring(MoreMaths.round(value / 16, Settings.format_decimal_points))
+    elseif Settings.format_angles_degrees then
         return string.format('%sdeg',
             MoreMaths.round(ugui.internal.remap(value, 0, 65536, 0, 360), Settings.format_decimal_points))
     else
