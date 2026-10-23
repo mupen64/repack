@@ -12,7 +12,7 @@ __impl.name = function() return Locales.msg.SEMANTIC_WORKFLOW_PREFERENCES_TAB_NA
 __impl.help_key = 'PREFERENCES_TAB'
 
 ---@type Gui
-local Gui = dofile(views_path .. 'SemanticWorkflow/Definitions/Gui.lua')
+local Gui = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Gui.lua')
 
 local UID = UIDProvider.allocate_once('PreferencesTab', function(enum_next)
     return {

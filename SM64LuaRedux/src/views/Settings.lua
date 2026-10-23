@@ -45,7 +45,6 @@ local UID = UIDProvider.allocate_once('SettingsV6', function(enum_next)
 end)
 
 local VIEWPORT_HEIGHT = 16
-local content_height = VIEWPORT_HEIGHT
 
 local visual_items = {
     {
@@ -176,7 +175,7 @@ local visual_items = {
             local new_ff_fps = math.max(1, math.abs(value))
             if meta.signal_change == ugui.signal_change_states.started or
                 meta.signal_change == ugui.signal_change_states.ongoing then
-                action.invoke(ACTION_SETTINGS_SET_FF_FPS, nil, nil, {fps = tostring(new_ff_fps)})
+                action.invoke(ACTION_SETTINGS_SET_FF_FPS, nil, nil, { fps = tostring(new_ff_fps) })
             end
         end,
     },
@@ -530,51 +529,23 @@ local function draw_groups()
     for i = 1, #groups, 1 do
         y = draw_group(groups[i], y, UID.GroupContentPanels + i - 1)
     end
-    content_height = y
 end
 
 return {
     name = function() return Locales.msg.SETTINGS_TAB_NAME end,
     draw = function()
-        local scrollbar_rectangle = grid_rect(7.5, 0, 0.5, VIEWPORT_HEIGHT)
-        if Settings.navbar_visible then
-            scrollbar_rectangle.height = grid_rect(0, 16, 0, 0).y - scrollbar_rectangle.y
-        else
-            scrollbar_rectangle.height = ugui.internal.environment.window_size.y - scrollbar_rectangle.y
-        end
-        scrollbar_rectangle.height = scrollbar_rectangle.height - 4
         local content_rectangle = grid_rect(0, 0, 7.5, VIEWPORT_HEIGHT)
-        local cell_height = Settings.grid_size
-        local max_scroll = math.max(0, (content_height - VIEWPORT_HEIGHT) * cell_height)
-
-        if can_scroll() then
-            if ugui.internal.is_mouse_wheel_up() then
-                Settings.settings_scroll_offset = math.max(0, Settings.settings_scroll_offset - cell_height * 3)
-            elseif ugui.internal.is_mouse_wheel_down() then
-                Settings.settings_scroll_offset = math.min(max_scroll,
-                    Settings.settings_scroll_offset + cell_height * 3)
-            end
-        end
-
-        BreitbandGraphics.push_clip(Drawing.map_rect(content_rectangle))
-        Drawing.push_offset(0, -Settings.settings_scroll_offset)
-        draw_groups()
-        Drawing.pop_offset()
-        BreitbandGraphics.pop_clip()
-
-        max_scroll = math.max(0, (content_height - VIEWPORT_HEIGHT) * cell_height)
-        if max_scroll > 0 then
-            Settings.settings_scroll_offset = math.min(Settings.settings_scroll_offset, max_scroll)
-            local relative_scroll = ugui.scrollbar({
-                uid = UID.Scrollbar,
-                rectangle = scrollbar_rectangle,
-                value = Settings.settings_scroll_offset / max_scroll,
-                ratio = VIEWPORT_HEIGHT / content_height,
-            })
-            Settings.settings_scroll_offset = relative_scroll * max_scroll
+        if Settings.navbar_visible then
+            content_rectangle.height = grid_rect(0, 16, 0, 0).y - content_rectangle.y - 4
         else
-            Settings.settings_scroll_offset = 0
+            content_rectangle.height = ugui.internal.environment.window_size.y - content_rectangle.y - 4
         end
+
+        ugui.panel({
+            uid = UID.Scrollbar,
+            rectangle = content_rectangle,
+            y_overflow = ugui.overflow.scroll,
+        }, draw_groups)
 
         if Settings.navbar_visible then
             local cover_rectangle = grid_rect(0, 16, 8, 30)

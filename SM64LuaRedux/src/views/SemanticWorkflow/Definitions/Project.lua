@@ -66,7 +66,7 @@ function cls_project:load(file) end
 function cls_project:save() end
 
 __impl = cls_project
-dofile(views_path .. 'SemanticWorkflow/Implementations/Project.lua')
+dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Implementations/Project.lua')
 __impl = nil
 
 return cls_project

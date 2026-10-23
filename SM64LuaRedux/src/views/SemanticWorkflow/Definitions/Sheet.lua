@@ -64,7 +64,7 @@ function cls_sheet:set_base_sheet(base_sheet) end
 function cls_sheet:invalidated() end
 
 __impl = cls_sheet
-dofile(views_path .. 'SemanticWorkflow/Implementations/Sheet.lua')
+dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Implementations/Sheet.lua')
 __impl = nil
 
 return cls_sheet

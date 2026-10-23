@@ -9,7 +9,7 @@
 local __impl = __impl
 
 ---@type Sheet
-local Sheet = dofile(views_path .. 'SemanticWorkflow/Definitions/Sheet.lua')
+local Sheet = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Sheet.lua')
 
 function __impl.new()
     return {

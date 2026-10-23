@@ -15,7 +15,7 @@ local cls_section = {}
 function cls_section.new(name) end
 
 __impl = cls_section
-dofile(views_path .. 'SemanticWorkflow/Implementations/Section.lua')
+dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Implementations/Section.lua')
 __impl = nil
 
 return cls_section

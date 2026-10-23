@@ -9,7 +9,7 @@
 local __impl = __impl
 
 ---@type Section
-local Section = dofile(views_path .. 'SemanticWorkflow/Definitions/Section.lua')
+local Section = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Section.lua')
 
 --#region Constants
 

@@ -13,7 +13,7 @@ local cls_input_list_gui = {
 }
 
 __impl = cls_input_list_gui
-dofile(views_path .. 'SemanticWorkflow/Implementations/InputListGui.lua')
+dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Implementations/InputListGui.lua')
 __impl = nil
 
 return cls_input_list_gui

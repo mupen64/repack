@@ -59,7 +59,7 @@ local picker_original = {0xFF, 0, 0}
 local color_text = nil
 local color_text_ghost = nil
 
-local Colors = dofile(views_path .. 'GhostTab/Colors.lua')
+local Colors = dofile(Redux.VIEWS_PATH .. 'GhostTab/Colors.lua')
 
 return {
     name = function() return Locales.msg.GHOST_PLAYBACK_TAB_NAME end,

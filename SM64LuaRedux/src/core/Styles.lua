@@ -36,8 +36,8 @@ local standard_styler_params_clone = ugui.internal.deep_clone(ugui.standard_styl
 ---@return { def_path: string, img_path: string }
 local function get_style_paths(name)
     return {
-        def_path = styles_path .. name .. '\\' .. 'style.lua',
-        img_path = styles_path .. name .. '\\' .. 'style.png',
+        def_path = Redux.STYLES_PATH .. name .. '\\' .. 'style.lua',
+        img_path = Redux.STYLES_PATH .. name .. '\\' .. 'style.png',
     }
 end
 
