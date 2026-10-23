@@ -26,7 +26,7 @@ local UID = UIDProvider.allocate_once('GhostSettings', function(enum_next)
     }
 end)
 
-local Colors = dofile(views_path .. 'GhostTab/Colors.lua')
+local Colors = dofile(Redux.VIEWS_PATH .. 'GhostTab/Colors.lua')
 
 -- highlight color editing state, like the playback tab's hat color
 local highlight_text = nil

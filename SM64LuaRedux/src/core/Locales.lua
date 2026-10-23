@@ -341,7 +341,7 @@ local files = {
 
 for i = 1, #files, 1 do
     local name = files[i]
-    locales[i] = dofile(string.format('%s%s.lua', locales_path, name))
+    locales[i] = dofile(string.format('%s%s.lua', Redux.LOCALES_PATH, name))
 end
 
 ---@return string[] # The names of all available locales.

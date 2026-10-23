@@ -13,13 +13,13 @@ local UID = UIDProvider.allocate_once('GhostTab', function(enum_next)
     }
 end)
 
-GhostVarWatch = dofile(views_path .. 'GhostTab/GhostVarWatch.lua')
+GhostVarWatch = dofile(Redux.VIEWS_PATH .. 'GhostTab/GhostVarWatch.lua')
 
-local playback_tab = dofile(views_path .. 'GhostTab/Playback.lua')
+local playback_tab = dofile(Redux.VIEWS_PATH .. 'GhostTab/Playback.lua')
 local tabs = {
-    dofile(views_path .. 'GhostTab/Recording.lua'),
+    dofile(Redux.VIEWS_PATH .. 'GhostTab/Recording.lua'),
     playback_tab,
-    dofile(views_path .. 'GhostTab/Settings.lua'),
+    dofile(Redux.VIEWS_PATH .. 'GhostTab/Settings.lua'),
 }
 
 local previous_tab_index = Settings.ghost_tab_index or 1

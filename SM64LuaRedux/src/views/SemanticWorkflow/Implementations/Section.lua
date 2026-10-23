@@ -9,7 +9,7 @@
 local __impl = __impl
 
 ---@type SectionInputs
-local SectionInputs = dofile(views_path .. 'SemanticWorkflow/Definitions/SectionInputs.lua')
+local SectionInputs = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/SectionInputs.lua')
 
 function __impl.new(name)
     local tmp = {}

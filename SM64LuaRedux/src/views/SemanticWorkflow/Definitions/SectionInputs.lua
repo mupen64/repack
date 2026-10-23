@@ -22,7 +22,7 @@ local cls_section_inputs = {}
 function cls_section_inputs.new() end
 
 __impl = cls_section_inputs
-dofile(views_path .. 'SemanticWorkflow/Implementations/SectionInputs.lua')
+dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Implementations/SectionInputs.lua')
 __impl = nil
 
 return cls_section_inputs

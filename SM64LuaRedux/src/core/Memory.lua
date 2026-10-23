@@ -75,7 +75,7 @@ Memory = {
 
 -- used to help determine when Memory.update_objects() should be called
 local objects_loaded = false
-local Objects = dofile(core_path .. 'Objects.lua')
+local Objects = dofile(Redux.CORE_PATH .. 'Objects.lua')
 
 ---Initializes the current and previous game state to the current readout from the emulator.
 function Memory.initialize()

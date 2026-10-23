@@ -12,7 +12,7 @@
 local __impl = __impl
 
 ---@type Section
-local Section = dofile(views_path .. 'SemanticWorkflow/Definitions/Section.lua')
+local Section = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Section.lua')
 
 local function playback_speed_mode()
     return Settings.semantic_workflow.fast_foward and Mupen.CoreSpeedMode.UltraFastForward or Mupen.CoreSpeedMode.Normal

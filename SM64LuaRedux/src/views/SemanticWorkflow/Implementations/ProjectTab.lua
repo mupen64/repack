@@ -12,10 +12,10 @@ __impl.name = function() return Locales.msg.SEMANTIC_WORKFLOW_PROJECT_TAB_NAME e
 __impl.help_key = 'PROJECT_TAB'
 
 ---@type Project
-local Project = dofile(views_path .. 'SemanticWorkflow/Definitions/Project.lua')
+local Project = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Project.lua')
 
 ---@type Gui
-local Gui = dofile(views_path .. 'SemanticWorkflow/Definitions/Gui.lua')
+local Gui = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Gui.lua')
 
 local UID = UIDProvider.allocate_once('ProjectTab', function(enum_next)
     return {

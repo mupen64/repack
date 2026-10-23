@@ -4,7 +4,7 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
-local UID = dofile(views_path .. "SemanticWorkflow/SharedUIDs.lua")
+local UID = dofile(Redux.VIEWS_PATH .. "SemanticWorkflow/SharedUIDs.lua")
 
 return {
     GetDialog = function(key)

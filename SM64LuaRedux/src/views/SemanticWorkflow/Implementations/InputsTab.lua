@@ -13,10 +13,10 @@ __impl.name = function() return Locales.msg.SEMANTIC_WORKFLOW_INPUTS_TAB_NAME en
 __impl.help_key = 'INPUTS_TAB'
 
 ---@type InputListGui
-local InputListGui = dofile(views_path .. 'SemanticWorkflow/Definitions/InputListGui.lua')
+local InputListGui = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/InputListGui.lua')
 
 ---@type Gui
-local Gui = dofile(views_path .. 'SemanticWorkflow/Definitions/Gui.lua')
+local Gui = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Gui.lua')
 
 --#region Constants
 

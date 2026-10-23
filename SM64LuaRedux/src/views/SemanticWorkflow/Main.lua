@@ -4,7 +4,7 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
-dofile(views_path .. 'SemanticWorkflow/Version.lua')
+dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Version.lua')
 
 --#region helpers
 
@@ -76,12 +76,12 @@ end
 
 --#endregion
 
-local UID = dofile(views_path .. 'SemanticWorkflow/SharedUIDs.lua')
+local UID = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/SharedUIDs.lua')
 
 ---@type Project
-local Project = dofile(views_path .. 'SemanticWorkflow/Definitions/Project.lua')
+local Project = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Definitions/Project.lua')
 
-local Help = dofile(views_path .. 'SemanticWorkflow/Help.lua')
+local Help = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Help.lua')
 
 ---@type Project
 SemanticWorkflowProject = Project.new()
@@ -97,7 +97,7 @@ ugui.standard_styler.draw_icon = function(rectangle, color, key)
     for _, icon in ipairs(custom_icons) do
         if key == icon then
             BreitbandGraphics.draw_image2({
-                path = views_path .. 'SemanticWorkflow/Resources/' .. key .. postfix .. '.png',
+                path = Redux.VIEWS_PATH .. 'SemanticWorkflow/Resources/' .. key .. postfix .. '.png',
                 destx1 = rectangle.x,
                 desty1 = rectangle.y,
                 destx2 = rectangle.x + rectangle.width,
@@ -111,7 +111,7 @@ ugui.standard_styler.draw_icon = function(rectangle, color, key)
     ugui_icon_draw(rectangle, color, key)
 end
 
-local Tabs = dofile(views_path .. 'SemanticWorkflow/Tabs.lua')
+local Tabs = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Tabs.lua')
 local selected_tab_index = 1
 local previous_tab_index = selected_tab_index
 local tab_transition_x = 10

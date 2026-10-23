@@ -4,50 +4,57 @@
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
-folder = debug.getinfo(1).source:sub(2):match('(.*\\)')
-styles_path = folder .. 'res\\styles\\'
-locales_path = folder .. 'res\\lang\\'
-views_path = folder .. 'views\\'
-core_path = folder .. 'core\\'
-vendor_path = folder .. '..\\vendor\\'
-processors_path = folder .. 'processors\\'
+Redux = {
+    _VERSION = 'next',
+    _URL = 'https://codeberg.org/mupen64/SM64LuaRedux',
+    _DESCRIPTION = 'Powerful SM64 TASing utility',
+    _LICENSE = 'GPL-3',
+}
+
+Redux.FOLDER = debug.getinfo(1).source:sub(2):match('(.*\\)')
+Redux.STYLES_PATH = Redux.FOLDER .. 'res\\styles\\'
+Redux.LOCALES_PATH = Redux.FOLDER .. 'res\\lang\\'
+Redux.VIEWS_PATH = Redux.FOLDER .. 'views\\'
+Redux.CORE_PATH = Redux.FOLDER .. 'core\\'
+Redux.VENDOR_PATH = Redux.FOLDER .. '..\\vendor\\'
+Redux.PROCESSORS_PATH = Redux.FOLDER .. 'processors\\'
 
 ---@module 'breitbandgraphics-amalgamated'
-BreitbandGraphics = dofile(vendor_path .. 'breitbandgraphics-amalgamated.lua')
+BreitbandGraphics = dofile(Redux.VENDOR_PATH .. 'breitbandgraphics-amalgamated.lua')
 
 ---@module 'ugui-amalgamated'
-ugui = dofile(vendor_path .. 'ugui-amalgamated.lua')
+ugui = dofile(Redux.VENDOR_PATH .. 'ugui-amalgamated.lua')
 
 ---@module 'linq'
-lualinq = dofile(vendor_path .. 'linq.lua')
+lualinq = dofile(Redux.VENDOR_PATH .. 'linq.lua')
 
-json = dofile(vendor_path .. 'json.lua')
+json = dofile(Redux.VENDOR_PATH .. 'json.lua')
 
-dofile(styles_path .. 'base_style.lua')
-dofile(core_path .. 'UIDProvider.lua')
-dofile(core_path .. 'Helpers.lua')
-dofile(core_path .. 'Settings.lua')
-dofile(core_path .. 'Formatter.lua')
-dofile(core_path .. 'Drawing.lua')
-dofile(core_path .. 'Memory.lua')
-dofile(core_path .. 'RNG.lua')
-dofile(core_path .. 'Joypad.lua')
-dofile(core_path .. 'Angles.lua')
-dofile(core_path .. 'Engine.lua')
-dofile(core_path .. 'MoreMaths.lua')
-dofile(core_path .. 'WorldVisualizer.lua')
-dofile(core_path .. 'MiniVisualizer.lua')
-dofile(core_path .. 'Timer.lua')
-dofile(core_path .. 'Ghosts.lua')
-dofile(core_path .. 'VarWatch.lua')
-dofile(core_path .. 'Styles.lua')
-dofile(core_path .. 'Locales.lua')
-dofile(core_path .. 'Presets.lua')
-dofile(core_path .. 'Dumping.lua')
-Validators = dofile(core_path .. 'Validators.lua')
-dofile(core_path .. 'Actions.lua')
-Addresses = dofile(core_path .. 'Addresses.lua')
-Mapping = dofile(core_path .. 'Mapping.lua')
+dofile(Redux.STYLES_PATH .. 'base_style.lua')
+dofile(Redux.CORE_PATH .. 'UIDProvider.lua')
+dofile(Redux.CORE_PATH .. 'Helpers.lua')
+dofile(Redux.CORE_PATH .. 'Settings.lua')
+dofile(Redux.CORE_PATH .. 'Formatter.lua')
+dofile(Redux.CORE_PATH .. 'Drawing.lua')
+dofile(Redux.CORE_PATH .. 'Memory.lua')
+dofile(Redux.CORE_PATH .. 'RNG.lua')
+dofile(Redux.CORE_PATH .. 'Joypad.lua')
+dofile(Redux.CORE_PATH .. 'Angles.lua')
+dofile(Redux.CORE_PATH .. 'Engine.lua')
+dofile(Redux.CORE_PATH .. 'MoreMaths.lua')
+dofile(Redux.CORE_PATH .. 'WorldVisualizer.lua')
+dofile(Redux.CORE_PATH .. 'MiniVisualizer.lua')
+dofile(Redux.CORE_PATH .. 'Timer.lua')
+dofile(Redux.CORE_PATH .. 'Ghosts.lua')
+dofile(Redux.CORE_PATH .. 'VarWatch.lua')
+dofile(Redux.CORE_PATH .. 'Styles.lua')
+dofile(Redux.CORE_PATH .. 'Locales.lua')
+dofile(Redux.CORE_PATH .. 'Presets.lua')
+dofile(Redux.CORE_PATH .. 'Dumping.lua')
+Validators = dofile(Redux.CORE_PATH .. 'Validators.lua')
+dofile(Redux.CORE_PATH .. 'Actions.lua')
+Addresses = dofile(Redux.CORE_PATH .. 'Addresses.lua')
+Mapping = dofile(Redux.CORE_PATH .. 'Mapping.lua')
 
 apply_math_shim()
 
@@ -59,26 +66,26 @@ Presets.apply(Presets.persistent.current_index)
 Actions.register_all()
 
 local views = {
-    dofile(views_path .. 'TAS.lua'),
-    dofile(views_path .. 'SemanticWorkflow/Main.lua'),
-    dofile(views_path .. 'Settings.lua'),
-    dofile(views_path .. 'Tools.lua'),
-    dofile(views_path .. 'Timer.lua'),
-    dofile(views_path .. 'Visualizer.lua'),
-    dofile(views_path .. 'GhostTab/Main.lua'),
+    dofile(Redux.VIEWS_PATH .. 'TAS.lua'),
+    dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Main.lua'),
+    dofile(Redux.VIEWS_PATH .. 'Settings.lua'),
+    dofile(Redux.VIEWS_PATH .. 'Tools.lua'),
+    dofile(Redux.VIEWS_PATH .. 'Timer.lua'),
+    dofile(Redux.VIEWS_PATH .. 'Visualizer.lua'),
+    dofile(Redux.VIEWS_PATH .. 'GhostTab/Main.lua'),
 }
 
-local semantic_workflow = dofile(processors_path .. 'SemanticWorkflow.lua')
+local semantic_workflow = dofile(Redux.PROCESSORS_PATH .. 'SemanticWorkflow.lua')
 local processors = {
     semantic_workflow.transform,
-    dofile(processors_path .. 'Walk.lua'),
-    dofile(processors_path .. 'Swimming.lua'),
-    dofile(processors_path .. 'Wallkicker.lua'),
-    dofile(processors_path .. 'Framewalk.lua'),
+    dofile(Redux.PROCESSORS_PATH .. 'Walk.lua'),
+    dofile(Redux.PROCESSORS_PATH .. 'Swimming.lua'),
+    dofile(Redux.PROCESSORS_PATH .. 'Wallkicker.lua'),
+    dofile(Redux.PROCESSORS_PATH .. 'Framewalk.lua'),
     semantic_workflow.readback,
 }
 
-Notifications = dofile(views_path .. 'Notifications.lua')
+Notifications = dofile(Redux.VIEWS_PATH .. 'Notifications.lua')
 
 ugui_environment = {}
 local stored_mouse_events = {}
