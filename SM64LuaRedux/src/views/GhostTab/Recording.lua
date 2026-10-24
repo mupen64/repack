@@ -113,7 +113,7 @@ return {
         end
 
         local path = Settings.ghost_path
-        local is_focused = ugui.internal.keyboard_captured_control == UID.GhostPath
+        local is_focused = ugui.internal.keyboard_captured_control == ugui.internal.resolve_uid(UID.GhostPath)
         if not is_focused then
             path = shorten_path(Settings.ghost_path)
         end

@@ -20,9 +20,10 @@ avi = {}
 hotkey = {}
 action = {}
 clipboard = {}
+dialogs = {}
 
 Mupen = {
-    _VERSION = '1.5.0-7',
+    _VERSION = '1.5.0-8',
     _URL = 'https://github.com/mupen64/mupen64-rr-lua',
     _DESCRIPTION = 'Mupen64 Lua Scripting API',
     _LICENSE = 'GPL-2',
@@ -770,6 +771,21 @@ function emu.get_pref(pref) end
 ---Gets the value of a user preference.
 ---@param pref "lang"
 ---@return "en_US"|string
+function emu.get_pref(pref) end
+
+---Gets the value of a user preference.
+---@param pref "reduced_motion"
+---@return boolean
+function emu.get_pref(pref) end
+
+---Gets the value of a user preference.
+---@param pref "high_contrast"
+---@return boolean
+function emu.get_pref(pref) end
+
+---Gets the value of a user preference.
+---@param pref "caret_blink_time"
+---@return integer|false
 function emu.get_pref(pref) end
 
 ---Displays the text `message` in the console. Similar to `print`, but only accepts strings or numbers.
@@ -2361,6 +2377,19 @@ function clipboard.set(type, value) end
 ---Clears the clipboard.
 ---@return boolean # Whether the operation succeeded.
 function clipboard.clear() end
+
+--#endregion
+
+-- dialogs functions
+--#region
+
+---@alias DialogMessageTone "error" | "warn" | "info"
+
+---Shows a non-modal notification to the user.
+---@param content string The notification text.
+---@param title string? The notification title. If nil, no title is shown.
+---@param type DialogMessageTone? The notification tone. Defaults to "warn".
+function dialogs.show_notification(content, title, type) end
 
 --#endregion
 

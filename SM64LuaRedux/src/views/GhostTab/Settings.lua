@@ -70,8 +70,8 @@ return {
 
         -- a move requested while the hack is running finishes once its ghosts are freed
         local target_base = Ghosts.get_pending_base_offset() or Ghosts.base_offset
-        local is_focused = ugui.internal.keyboard_captured_control == UID.BaseOffset
-        if not is_focused then
+        local is_focused = ugui.internal.keyboard_captured_control == ugui.internal.resolve_uid(UID.BaseOffset)
+        if base_offset_text == nil or not is_focused then
             base_offset_text = string.format('0x%X', target_base)
         end
         base_offset_text = ugui.textbox({
@@ -155,7 +155,7 @@ return {
         })
 
         local color = Settings.ghost_recording_highlight_color or {255, 0, 0}
-        if highlight_text == nil or ugui.internal.keyboard_captured_control ~= UID.HighlightColor then
+        if highlight_text == nil or ugui.internal.keyboard_captured_control ~= ugui.internal.resolve_uid(UID.HighlightColor) then
             highlight_text = Colors.rgb_to_str(color)
         end
         highlight_text = ugui.textbox({

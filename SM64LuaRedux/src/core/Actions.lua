@@ -42,7 +42,6 @@ ACTION_SETTINGS_SET_LIGHT_STYLE = ACTION_SETTINGS .. ' > Set Light Style...'
 ACTION_SETTINGS_SET_DARK_STYLE = ACTION_SETTINGS .. ' > Set Dark Style...'
 ACTION_SETTINGS_SET_LANGUAGE = ACTION_SETTINGS .. ' > Set Language...'
 ACTION_SETTINGS_SET_ANIMATIONS = ACTION_SETTINGS .. ' > Set Animations...'
-ACTION_SETTINGS_TOGGLE_CONSOLE_NOTIFICATIONS = ACTION_SETTINGS .. ' > Toggle Console Notifications'
 ACTION_SETTINGS_SET_FF_FPS = ACTION_SETTINGS .. ' > Set Fast-Forward FPS... ---'
 ACTION_SETTINGS_TOGGLE_MANUAL_ON_JOYSTICK = ACTION_SETTINGS .. ' > Manual On Joystick Interact'
 ACTION_SETTINGS_TOGGLE_LOCK_HOTKEYS = ACTION_SETTINGS .. ' > Lock Hotkeys When Control Active ---'
@@ -556,18 +555,6 @@ actions[#actions + 1] = wrap_params({
     end,
 })
 
-actions[#actions + 1] = wrap_params({
-    path = ACTION_SETTINGS_TOGGLE_CONSOLE_NOTIFICATIONS,
-    on_press = function()
-        Settings.notification_style = Settings.notification_style == NOTIFICATION_STYLE_CONSOLE
-            and NOTIFICATION_STYLE_BUBBLE
-            or NOTIFICATION_STYLE_CONSOLE
-        action.notify_active_changed(ACTION_SETTINGS_TOGGLE_CONSOLE_NOTIFICATIONS)
-    end,
-    get_active = function()
-        return Settings.notification_style == NOTIFICATION_STYLE_CONSOLE
-    end,
-})
 
 actions[#actions + 1] = wrap_params({
     path = ACTION_SETTINGS_SET_FF_FPS,

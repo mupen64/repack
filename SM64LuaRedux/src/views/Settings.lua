@@ -10,7 +10,6 @@ local UID = UIDProvider.allocate_once('SettingsV6', function(enum_next)
         LightStyle = enum_next(),
         DarkStyle = enum_next(),
         Locale = enum_next(),
-        NotificationStyle = enum_next(),
         Animations = enum_next(),
         RepaintThrottle = enum_next(),
         EnableManualOnJoystickInteract = enum_next(),
@@ -41,6 +40,7 @@ local UID = UIDProvider.allocate_once('SettingsV6', function(enum_next)
         VarWatchItemLabelBase = enum_next(UIDProvider.unknown),
         HittestBlockHackPanel = enum_next(),
         GroupContentPanels = enum_next(4),
+        GroupSeparators = enum_next(4),
     }
 end)
 
@@ -141,27 +141,7 @@ local visual_items = {
             end
         end,
     },
-    {
-        text = function() return Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS end,
-        func = function(rect)
-            local notification_styles = {
-                Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS_BUBBLE,
-                Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS_CONSOLE,
-            }
 
-            local _, meta = ugui.carrousel_button({
-                uid = UID.NotificationStyle,
-                rectangle = rect,
-                items = notification_styles,
-                selected_index = Settings.notification_style,
-                tooltip = Locales.msg.SETTINGS_VISUALS_NOTIFICATIONS_TOOLTIP,
-            })
-
-            if meta.signal_change == ugui.signal_change_states.started then
-                action.invoke(ACTION_SETTINGS_TOGGLE_CONSOLE_NOTIFICATIONS)
-            end
-        end,
-    },
     {
         text = function() return Locales.msg.SETTINGS_VISUALS_FF_FPS end,
         func = function(rect)
@@ -218,6 +198,18 @@ local interaction_items = {
     },
 }
 
+local function content_grid_width()
+    return 8 - (ugui.standard_styler.params.scrollbar.thickness + Settings.grid_gap) / Settings.grid_size
+end
+
+local function content_rect(x, y, width, height)
+    local origin = grid_rect(0, 0, 0, 0)
+    local rect = grid_rect(x, y, width, height)
+    rect.x = rect.x - origin.x
+    rect.y = rect.y - origin.y
+    return rect
+end
+
 local function draw_setting_item(item, y, label_uid)
     if item.visible and not item.visible() then
         return y
@@ -226,15 +218,15 @@ local function draw_setting_item(item, y, label_uid)
     local theme = Styles.theme()
     local foreground_color = Drawing.foreground_color()
 
-    local control_width = item.control_width or 4
+    local control_width = math.min(item.control_width or 4, content_grid_width())
     local control_height = item.control_height or 1
 
     if item.show_label ~= false then
-        local control_x = 7.5 - control_width
+        local control_x = content_grid_width() - control_width
 
         ugui.label({
             uid = label_uid,
-            rectangle = grid_rect(0, y, control_x, control_height),
+            rectangle = content_rect(0, y, control_x, control_height),
             text = item.text(),
             color = foreground_color,
             font_size = theme.font_size * 1.1,
@@ -244,20 +236,20 @@ local function draw_setting_item(item, y, label_uid)
             fit = true
         })
 
-        item.func(grid_rect(control_x, y, control_width, control_height))
+        item.func(content_rect(control_x, y, control_width, control_height))
         return y + (item.row_height or 1.25)
     end
 
-    item.func(grid_rect(0, y, control_width, control_height))
+    item.func(content_rect(0, y, control_width, control_height))
     return y + (item.row_height or 1.25)
 end
 
-local function draw_group(group, y, content_uid)
+local function draw_group(group, y, content_uid, separator_uid)
     local theme = Styles.theme()
     local foreground_color = Drawing.foreground_color()
     local label_text = group.text()
     local label_font_size = theme.font_size * 1.1
-    local label_rectangle = grid_rect(1.1, y, 6.4, 1)
+    local label_rectangle = content_rect(1.1, y, content_grid_width() - 1.1, 1)
 
     ugui.label({
         uid = group.label_uid,
@@ -279,25 +271,17 @@ local function draw_group(group, y, content_uid)
     local separator_end_x = label_rectangle.x + label_rectangle.width
     if separator_x < separator_end_x then
         local separator_y = label_rectangle.y + label_rectangle.height / 2
-        local from = Drawing.map_point({ x = separator_x, y = separator_y })
-        local to = Drawing.map_point({ x = separator_end_x, y = separator_y })
-        local separator_color = {
-            r = foreground_color.r / 255,
-            g = foreground_color.g / 255,
-            b = foreground_color.b / 255,
-            a = 0.3,
-        }
-
-        local p = painter.current()
-        p:begin_path()
-        p:line(from.x, from.y, to.x, to.y)
-        p:stroke(separator_color, { width = 1 })
+        ugui.panel({
+            uid = separator_uid,
+            rectangle = { x = separator_x, y = separator_y, width = separator_end_x - separator_x, height = 1 },
+            fill = { r = foreground_color.r, g = foreground_color.g, b = foreground_color.b, a = 77 },
+        })
     end
 
     local expanded = Settings[group.expanded_setting]
     local new_expanded = ugui.toggle_button({
         uid = group.uid,
-        rectangle = grid_rect(0, y, 1, 1),
+        rectangle = content_rect(0, y, 1, 1),
         text = expanded and '[icon:arrow_down]' or '[icon:arrow_right]',
         is_checked = expanded,
         styler_mixin = { icon_size = 14 },
@@ -308,7 +292,7 @@ local function draw_group(group, y, content_uid)
     if new_expanded then
         ugui.panel({
             uid = content_uid,
-            rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
+            rectangle = { x = 0, y = 0, width = grid_rect(0, 0, content_grid_width(), 1).width, height = 0 },
             transition = ugui.transition.fly({ x = 0, y = -5, duration = Settings.animations == 'fast' and 0.1 or nil }),
         }, function()
             for item_index = 1, #group.items, 1 do
@@ -527,14 +511,14 @@ local groups = {
 local function draw_groups()
     local y = 0.2
     for i = 1, #groups, 1 do
-        y = draw_group(groups[i], y, UID.GroupContentPanels + i - 1)
+        y = draw_group(groups[i], y, UID.GroupContentPanels + i - 1, UID.GroupSeparators + i - 1)
     end
 end
 
 return {
     name = function() return Locales.msg.SETTINGS_TAB_NAME end,
     draw = function()
-        local content_rectangle = grid_rect(0, 0, 7.5, VIEWPORT_HEIGHT)
+        local content_rectangle = grid_rect(0, 0, 8, VIEWPORT_HEIGHT)
         if Settings.navbar_visible then
             content_rectangle.height = grid_rect(0, 16, 0, 0).y - content_rectangle.y - 4
         else
@@ -544,6 +528,7 @@ return {
         ugui.panel({
             uid = UID.Scrollbar,
             rectangle = content_rectangle,
+            x_overflow = ugui.overflow.clip,
             y_overflow = ugui.overflow.scroll,
         }, draw_groups)
 

@@ -1,8 +1,12 @@
-## [Unreleased]
+# Unreleased
 
 TBD
 
-## [7.0.0] - 2026-10-20
+## ✨ Features
+
+- Changed notification system to use Mupen's native toasts.
+
+# 7.0.0
 
 This release adds crazy ghost-related features, map file loading support, and even improves the accuracy of computed angles!
 
@@ -10,7 +14,7 @@ You can now record and playback ghosts (and object ghosts!) from the new Ghost t
 
 Even if you don't need the new functionality, your TASes will automatically become faster just by updating :P
 
-### ✨ Features
+## ✨ Features
 
 - Added a Ghost tab with playback and recording functionality.
 - Added support for loading addresses from `.map` files.
@@ -24,38 +28,38 @@ Even if you don't need the new functionality, your TASes will automatically beco
 - Improved UI color consistency across themes.
 - Made the settings view into one unified scrolling page.
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - Fixed malformed presets preventing startup
 - Fixed .99 sometimes crossing the speed-drag threshold.
 - Fixed arctan value labels overflowing their available space.
 - Fixed the semantic workflow help text not wrapping.
 
-## [6.1.0] - 2026-07-31
+# 6.1.0
 
 This release integrates sm64-viz into SM64 Lua Redux and improves the documentation with some nice screenshots.
 
 Thanks to @hugou74130 for the great contributions!
 
-### ✨ Features
+## ✨ Features
 
 - Integrate sm64-viz (#106)
 
-### 📚 Documentation
+## 📚 Documentation
 
 - Add some screenshots (#123)
 
-## [6.0.0] - 2026-07-11
+# 6.0.0
 
 This release revamps a big part of the Semantic Workflow and fixes tons of bugs.
 
 Thanks to new contributor @hugou74130 for massively pushing this project forward and @FramePerfection for continued great design and implementation work!
 
-### ⚡ Performance
+## ⚡ Performance
 
 - Use `d2d.set_target_fps` for throttling during ff (#88)
 
-### ✨ Features
+## ✨ Features
 
 - **SemanticWorkflow** Add loops (#114)
 - **SemanticWorkflow** Use ultra fast forward mode for a cleaner viewing experience (#111)
@@ -66,7 +70,7 @@ Thanks to new contributor @hugou74130 for massively pushing this project forward
 - **Locale** Add French locale (#72)
 - **SemanticWorkflow** Base sheets (#53)
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - Poor text color contrast in dark mode (#107)
 - **Presets** Memory source not updating when changing preset (#104)
@@ -79,109 +83,109 @@ Thanks to new contributor @hugou74130 for massively pushing this project forward
 - **SemanticWorkflow** Saving new projects now shows a save file dialog instead of an open file dialog (#76)
 - **Ghost** Recording not working on non-US game versions (#67)
 
-### 📚 Documentation
+## 📚 Documentation
 
 - Update doc naming scheme (#121)
 
-## [5.3.1] - 2026-02-22
+# 5.3.1
 
 This release updates to the latest version of ugui and adds a few convenience features.
 
-### ✨ Features
+## ✨ Features
 
 - 'lock hotkeys when control is active' option (#63)
 - **Actions** Parameterize set angle/mag actions (#59)
 
-## [5.3.0] - 2026-02-03
+# 5.3.0
 
 This release contains some nice QoL features and a visual rework of the tools page, as well as some pretty important bugfixes.
 
-### ✨ Features
+## ✨ Features
 
 - **VarWatch** Always show speed efficiency fraction (#58)
 - **TAS** Hide atan inverse button when atan disabled (#57)
 - **Tools** Better tool organization (#56)
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - Hotkeys being locked too eagerly
 - Preset context menu not reacting to interactions
 
-## [5.2.1] - 2026-01-29
+# 5.2.1
 
 This release fixes some focus-related issues.
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - Various focus-related issues
 - Hotkeys triggering while keyboard focus is taken
 
-## [5.2.0] - 2026-01-27
+# 5.2.0
 
 This release implements Kieran's TAS page redesign and fixes some bugs related to the wallkicker and swimming modules.
 
 Thanks to Kieran for the awesome contribution! 🤗
 
-### ✨ Features
+## ✨ Features
 
 - New TAS page design (#52)
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - Wallkicker processor setting A button to invalid state
 - Swimming processor setting swim button to invalid state
 
-## [5.1.4] - 2025-11-11
+# 5.1.4
 
 Summary
 
 This release updates SM64 Lua Redux to use the latest version of [ugui](https://mupen64.com/ugui), fixing a focus-related bug.
 
-## [5.1.3] - 2025-11-10
+# 5.1.3
 
 This release updates SM64 Lua Redux to use the latest version of [ugui](https://mupen64.com/ugui), fixing a bug causing numberboxes to not work.
 
-## [5.1.2] - 2025-10-30
+# 5.1.2
 
 This release updates SM64 Lua Redux to use the latest version of [ugui](https://mupen64.com/ugui).
 
 There should be no noticeable changes in functionality, so please report regressions if there are any.
 
-## [5.1.1] - 2025-10-22
+# 5.1.1
 
 This release fixes a critical bug which causes extreme slowdown.
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - Preset constantly being re-applied
 
-## [5.1.0] - 2025-10-14
+# 5.1.0
 
 This release adds infinite presets, changes the fast-forward skipping behaviour to be specified in FPS, and improves the input overlay.
 
-### ✨ Features
+## ✨ Features
 
 - Infinite presets (#47)
 - Specify fast-forward skipping in FPS
 - **MiniVisualizer** Use raised frame sprite for joystick and action panel
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - **MiniVisualizer** Start button inputs not being recognized
 
-## [5.0.1] - 2025-10-14
+# 5.0.1
 
 This release fixes a bug with presets not being applied correctly.
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - Incorrect preset application
 
-## [5.0.0] - 2025-09-13
+# 5.0.0
 
 This release introduces integration with the Mupen64 Action API and cleans up the UI.
 
-### ✨ Features
+## ✨ Features
 
 - Make enabling manual mode on joystick interaction optional
 - Disallow setting manual mode in TAS view
@@ -191,7 +195,7 @@ This release introduces integration with the Mupen64 Action API and cleans up th
 - **Timer2** Remove Timer2 tab due to supersession by sm64-viz
 - **Grind** Remove auto-grind in favor of semantic workflow
 
-### 📚 Documentation
+## 📚 Documentation
 
 - **Ghost** Document Ghost.update
 - Fix wrong style mentioned in Customization.md
@@ -200,7 +204,7 @@ This release introduces integration with the Mupen64 Action API and cleans up th
 - Add Experiments.md, remove Tools.md
 - Move docs into main source tree, update to latest version
 
-## [4.0.0] - 2025-07-09
+# 4.0.0
 
 This release brings with it a new and incredibly powerful approach to TASing: the Semantic Workflow.
 
@@ -208,24 +212,24 @@ Thanks to @FramePerfection for designing and implementing the Semantic Workflow 
 
 Watch [Frame's Semantic Workflow tutorial](https://youtu.be/h5SwIaGlbIA) or use the help button in the Semantic Workflow tab for guidance surrounding the feature.
 
-### ✨ Features
+## ✨ Features
 
 - Semantic Workflow (#33)
 
-### ⚡ Performance
+## ⚡ Performance
 
 - **Styles** Lower style manager memory usage
 
-### 🐞 Bugfixes
+## 🐞 Bugfixes
 
 - **Timer2** Start button not reacting to inputs (#39)
 - **Hotkeys** Repeat hotkeys being triggered when main window is unfocused
 
-## [3.1.0] - 2025-03-16
+# 3.1.0
 
 This update revamps the settings and preset UI, while adding some small things here and there and fixing lots of bugs.
 
-### Features
+## Features
 - Dumping: Add movie start frame and movie path to dumps
 - Hotkeys: Add ignore hotkey presses when control is focused setting
 - Hotkeys: Add navbar visibility toggle hotkey
@@ -250,7 +254,7 @@ This update revamps the settings and preset UI, while adding some small things h
 - WorldVisualizer: Draw line between start and current position
 - WorldVisualizer: Visualize moved dist start position
 
-### Changes
+## Changes
 - Experiments: Rename "Experiments" tab to "Tools"
 - Experiments: Restructure UI into labeled sections, rename some buttons and improve interactions
 - Formatter: Display large percentages as ∞%
@@ -280,7 +284,7 @@ This update revamps the settings and preset UI, while adding some small things h
 - Views/VisualSettings: Use ugui tooltips
 - WorldVisualizer: Rename "Object Visualizer" to "World Visualizer"
 
-### Bugfixes
+## Bugfixes
 - Drawing: Drawing scale inaccuracy
 - Drawing: grid() not respecting offset stack
 - Engine: Speed efficiency 0 when it shouldn't be
@@ -299,12 +303,12 @@ This update revamps the settings and preset UI, while adding some small things h
 - Timer: Automatic/Manual toggle not working as expected
 - Views/HotkeySettings: Hotkey confirm text overlapping buttons
 
-## [3.1.0-rc2] - 2025-03-03
+# 3.1.0-rc2
 
 > [!WARNING]
 > This update is a release candidate and may not be on-par with the final release's quality.
 
-### Features
+## Features
 - Dumping: Add movie start frame and movie path to dumps
 - Hotkeys: Add ignore hotkey presses when control is focused setting
 - Hotkeys: Add spdkick hotkey
@@ -324,7 +328,7 @@ This update revamps the settings and preset UI, while adding some small things h
 - WorldVisualizer: Draw line between start and current position
 - WorldVisualizer: Visualize moved dist start position
 
-### Changes
+## Changes
 - Experiments: Rename "Experiments" tab to "Tools"
 - Experiments: Restructure UI into labeled sections, rename some buttons and improve interactions
 - Hotkeys: Change spdkick into toggle_spdkick (thanks to ChouxZi3)
@@ -352,7 +356,7 @@ This update revamps the settings and preset UI, while adding some small things h
 - Views/VisualSettings: Use ugui tooltips
 - WorldVisualizer: Rename "Object Visualizer" to "World Visualizer"
 
-### Bugfixes
+## Bugfixes
 - Drawing: Drawing scale inaccuracy
 - Engine: Speed efficiency 0 when it shouldn't be
 - Hotkeys: Angle down hotkey wrapping around to 65536 instead of 65535
@@ -364,14 +368,14 @@ This update revamps the settings and preset UI, while adding some small things h
 - TAS: Joystick value text being invisible
 - Views/HotkeySettings: Hotkey confirm text overlapping buttons
 
-## [3.1.0-rc1] - 2025-01-19
+# 3.1.0-rc1
 
 > [!WARNING]
 > This update is a release candidate and may not be on-par with the final release's quality.
 
 This update revamps the settings and preset UI, while adding some small things here and there and fixing lots of bugs.
 
-### Features
+## Features
 - Dumping: Add movie start frame and movie path to dumps
 - Hotkeys: Angle down/up hotkeys
 - Hotkeys: Auto-repeating hotkeys
@@ -386,7 +390,7 @@ This update revamps the settings and preset UI, while adding some small things h
 - VarWatch: Add yaw_vel and pitch_vel
 - WorldVisualizer: Visualize moved dist start position
 
-### Changes
+## Changes
 - Experiments: Rename "Experiments" tab to "Tools"
 - Experiments: Restructure UI into labeled sections, rename some buttons and improve interactions
 - Hotkeys: Ignore hotkeys while there is an active control
@@ -401,7 +405,7 @@ This update revamps the settings and preset UI, while adding some small things h
 - Tabs: Move Tools tab after Settings tab
 - WorldVisualizer: Rename "Object Visualizer" to "World Visualizer"
 
-### Bugfixes
+## Bugfixes
 - Drawing: Drawing scale inaccuracy
 - Engine: Speed efficiency 0 when it shouldn't be
 - Hotkeys: Angle down hotkey wrapping around to 65536 instead of 65535
@@ -412,7 +416,7 @@ This update revamps the settings and preset UI, while adding some small things h
 - PianoRoll: Joystick tips not being scaled down
 - TAS: Joystick value text being invisible 
 
-## [3.0.0] - 2024-11-07
+# 3.0.0
 
 This update introduces the piano roll (courtesy of @FramePerfection), a new settings experience, and many bugfixes.
 
@@ -425,11 +429,11 @@ This update introduces the piano roll (courtesy of @FramePerfection), a new sett
 * @crackhex made their first contribution in https://codeberg.org/mupen64/SM64LuaRedux/pull/24
 * @FramePerfection made their first contribution in https://codeberg.org/mupen64/SM64LuaRedux/pull/23
 
-## [2.0.1] - 2024-06-14
+# 2.0.1
 
-## [2.0.0] - 2024-03-29
+# 2.0.0
 
-### Noteworthy Changes
+## Noteworthy Changes
 - Arctan improvements by @sm64expert 
 - Full Japan, Shindou and Europe support by @sm64expert 
 - Add Windows 11 v2 style
@@ -439,54 +443,54 @@ This update introduces the piano roll (courtesy of @FramePerfection), a new sett
 - Move C buttons to right side in timer tab
 - Improve autodetect default settings
 
-### What's Changed
+## What's Changed
 * Arctan and .99 fix, support for Japan,Shindou and Europe by @sm64expert in https://codeberg.org/mupen64/SM64LuaRedux/pull/16
 
-### New Contributors
+## New Contributors
 * @sm64expert made their first contribution in https://codeberg.org/mupen64/SM64LuaRedux/pull/16
 
-## [1.9.0] - 2024-02-11
+# 1.9.0
 
-### Noteworthy Changes
+## Noteworthy Changes
 
 - Added address switcher (Only USA and JP built in)
 - Restructured input processing
 
-## [1.8.1] - 2024-02-01
+# 1.8.1
 
 Hotfix for mag circle-related bugs
 
-## [1.8.0] - 2024-01-29
+# 1.8.0
 
-### Noteworthy Changes
+## Noteworthy Changes
 
 - Presets now persist across restarts
 - Added hotkeys
 - Add "wallkicker" (automatic firsties)
 - Improved settings page layout
 
-## [1.7.0] - 2024-01-08
+# 1.7.0
 
-### Noteworthy changes
+## Noteworthy changes
 
 - Many bugfixes
 - New themes
 - Styling improvements
 - 1.1.7 compatibility
 
-## [1.6.0] - 2023-12-01
+# 1.6.0
 
-## [1.5.0] - 2023-11-18
+# 1.5.0
 
-## [1.4.0] - 2023-11-12
+# 1.4.0
 
-## [1.3.0] - 2023-10-28
+# 1.3.0
 
-## [1.2.0] - 2023-10-23
+# 1.2.0
 
-## [1.1.0] - 2023-10-18
+# 1.1.0
 
-### What's new?
+## What's new?
 
 - Fix Windows 10 dark listboxes having incorrect background color
 - Clean up unused code, refactor movement mode selection
@@ -495,4 +499,4 @@ Hotfix for mag circle-related bugs
 - Add hittesting ignoring for topmost controls
 - Fix topmost controls obeying ignored hittest regions
 
-## [1.0.0] - 2023-10-17
+# 1.0.0
