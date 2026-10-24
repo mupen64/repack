@@ -171,11 +171,6 @@ This action cannot be undone.
     SETTINGS_VISUALS_ANIMATIONS_ENABLED = 'Enabled',
     SETTINGS_VISUALS_ANIMATIONS_FAST = 'Fast',
     SETTINGS_VISUALS_ANIMATIONS_DISABLED = 'Disabled',
-    SETTINGS_VISUALS_NOTIFICATIONS = 'Notifications',
-    SETTINGS_VISUALS_NOTIFICATIONS_BUBBLE = 'Bubble',
-    SETTINGS_VISUALS_NOTIFICATIONS_CONSOLE = 'Console',
-    SETTINGS_VISUALS_NOTIFICATIONS_TOOLTIP =
-    'The style used for notifications.\n    Bubble: Show notifications over the game.\n    Console: Show notifications in the Lua console.',
     SETTINGS_VISUALS_FF_FPS = 'FPS during Fast-Forward',
     SETTINGS_VISUALS_FF_FPS_TOOLTIP = 'The FPS to render at when fast-forwarding. Decrease to increase performance.',
     SETTINGS_VISUALS_UPDATE_EVERY_VI = 'Update every VI',

@@ -103,17 +103,9 @@ local function parse_map_file(path, text)
     return entry, nil, missing
 end
 
--- Notifications is created after the views are loaded, so fall back to the console at startup
-local function notify(text)
-    if Notifications then
-        Notifications.show(text)
-    else
-        print(text)
-    end
-end
 
 ---Parses the map file at `path` and adds it to `Addresses`, replacing any entry previously loaded from the same path.
----Logs details to the console, since notifications are too brief to list every missing symbol.
+---Logs details to the console so every missing symbol is listed.
 ---@return integer|nil, string|nil, boolean|nil # The entry's index into `Addresses` and whether some values are missing, or nil and an error message
 local function add_map_file(path)
     local file, open_err = io.open(path, 'r')
@@ -197,8 +189,7 @@ local function restore_map_files()
     for _, path in ipairs(map_paths()) do
         local _, err = add_map_file(path)
         if err then
-            -- add_map_file already printed it, so only surface it on screen
-            if Notifications then Notifications.show(err) end
+            dialogs.show_notification(err)
         else
             loaded[#loaded + 1] = path
         end
@@ -225,7 +216,7 @@ local function load_map_file_dialog()
     end
     local index, err, incomplete = add_map_file(path)
     if not index then
-        notify(err .. ' (see console)')
+        dialogs.show_notification(err .. ' (see console)')
         return
     end
     local paths = map_paths()
@@ -234,9 +225,9 @@ local function load_map_file_dialog()
     end
     Settings.address_source_index = index
     if incomplete then
-        notify('Loaded map file ' .. Addresses[index].name() .. ', but some values may not work (see console)')
+        dialogs.show_notification('Loaded map file ' .. Addresses[index].name() .. ', but some values may not work (see console)')
     else
-        notify('Loaded map file ' .. Addresses[index].name())
+        dialogs.show_notification('Loaded map file ' .. Addresses[index].name())
     end
 end
 

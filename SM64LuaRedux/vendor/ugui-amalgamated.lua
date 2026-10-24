@@ -13,7 +13,7 @@
 --
 
 local ugui = {
-    _VERSION = '6.0.0',
+    _VERSION = '7.0.0',
     _URL = 'https://codeberg.org/mupen64/ugui',
     _DESCRIPTION = 'Flexible immediate-mode GUI library for Mupen Lua',
     _LICENSE = 'GPL-3',
@@ -32,17 +32,15 @@ local ugui = {
 --
 
 
----@alias UID number
+---@alias UguiUID number
 ---Local identifier for a control. Must be unique among siblings and stable across frames.
 ---Negative local IDs are reserved for controls owned by the library.
 
----@alias ResolvedUID number|string
+---@alias UguiResolvedUID number|string
 ---Internal identifier including the control's hierarchy.
 
----@class Environment
+---@class UguiEnvironment
 ---@field public mouse_position { x: number, y: number } The mouse position.
----@field public wheel number? **DEPRECATED**, use `mouse_events` instead. The mouse wheel delta.
----@field public is_primary_down boolean? Whether the primary mouse button is being pressed.
 ---@field public key_events KeyEventArgs[] The key events that happened since the last frame.
 ---@field public mouse_events MouseEventArgs[] The mouse events that happened since the last frame.
 ---@field public scale number? The global GUI scale. Defaults to 1.
@@ -50,7 +48,7 @@ local ugui = {
 ---@field public window_size { x: number, y: number }? The rendering bounds in device pixels. If nil, no rendering bounds are considered and certain controls, such as menus, might overflow off-screen.
 ---@field public shift boolean? Whether the shift key is being held down during this frame.
 
----@alias RichText string
+---@alias UguiRichText string
 ---Text which can contain other inline elements, such as icons.
 ---
 ---Examples:
@@ -61,22 +59,22 @@ local ugui = {
 ---    [icon:arrow_right:textbox.selection] Go Forward
 ---    Hello World!
 
----@alias RichTextSegment { type: ["text"|"icon"], value: string, color: string? }
+---@alias UguiRichTextSegment { type: ["text"|"icon"], value: string, color: string? }
 ---Represents a computed segment from a rich text string.
 
----@class ToolTip
----@field public text RichText The tooltip's text.
+---@class UguiToolTip
+---@field public text UguiRichText The tooltip's text.
 ---A tooltip, which can be used to show additional information about a control.
 
----@class Meta
----@field public signal_change SignalChangeState The change state of the control's primary signal.
----@field public context_menu_result MenuResult? The result of this control's context menu, when it is dismissed or an item is selected.
+---@class UguiMeta
+---@field public signal_change UguiSignalChangeState The change state of the control's primary signal.
+---@field public context_menu_result UguiMenuResult? The result of this control's context menu, when it is dismissed or an item is selected.
 ---Additional information about a placed control.
 
----@alias ControlReturnValue { primary: any, meta: Meta }
+---@alias UguiControlReturnValue { primary: any, meta: UguiMeta }
 
 
----@enum VisualState
+---@enum UguiVisualState
 -- The possible states of a control, which are used by the styler for drawing.
 ugui.visual_states = {
     --- The control doesn't accept user interactions.
@@ -89,7 +87,7 @@ ugui.visual_states = {
     active = 3,
 }
 
----@enum SignalChangeState
+---@enum UguiSignalChangeState
 --- The change in the primary signal ("return value") of a control.
 ugui.signal_change_states = {
     --- The signal isn't changing.
@@ -128,8 +126,13 @@ ugui.overflow = {
 
 ---Gets the basic visual state of a control.
 ---@param control UguiControl The control.
----@return VisualState # The control's visual state.
+---@return UguiVisualState # The control's visual state.
 ugui.get_visual_state = function(control)
+    local node = ugui.internal.find_node(control._uid)
+    if node and node.exiting and node.visual_state then
+        return node.visual_state
+    end
+
     if not ugui.internal.is_control_enabled(control) then
         return ugui.visual_states.disabled
     end
@@ -151,7 +154,7 @@ ugui.get_visual_state = function(control)
 end
 
 ---Begins a new frame.
----@param environment Environment The environment for the current frame.
+---@param environment UguiEnvironment The environment for the current frame.
 ugui.begin_frame = function(environment)
     if ugui.internal.frame_in_progress then
         error(
@@ -186,28 +189,28 @@ ugui.begin_frame = function(environment)
         environment.window_size = {x = math.maxinteger, y = math.maxinteger}
     end
 
-    -- Compute scroll delta.
+    if not environment.mouse_events then
+        environment.mouse_events = {}
+    end
+
     local scroll_delta = {x = 0, y = 0}
-    if environment.mouse_events then
-        for i = 1, #environment.mouse_events, 1 do
-            local e = environment.mouse_events[i]
-            if e.x_wheel ~= nil then
-                scroll_delta.x = scroll_delta.x + ugui.internal.sign(e.x_wheel)
-            end
-            if e.y_wheel ~= nil then
-                scroll_delta.y = scroll_delta.y + ugui.internal.sign(e.y_wheel)
-            end
+    for i = 1, #environment.mouse_events, 1 do
+        local e = environment.mouse_events[i]
+        if ugui.internal.is_primary_press(e) then
+            ugui.internal.is_primary_down = true
+        elseif e.button == 0 and e.pressed == false then
+            ugui.internal.is_primary_down = false
         end
-    elseif environment.wheel ~= nil then
-        scroll_delta = {x = 0, y = ugui.internal.sign(environment.wheel)}
+        if e.x_wheel ~= nil then
+            scroll_delta.x = scroll_delta.x + ugui.internal.sign(e.x_wheel)
+        end
+        if e.y_wheel ~= nil then
+            scroll_delta.y = scroll_delta.y + ugui.internal.sign(e.y_wheel)
+        end
     end
 
     ---@diagnostic disable-next-line: inject-field
     environment._scroll_delta = scroll_delta
-
-    if not environment.mouse_events then
-        environment.mouse_events = {}
-    end
 
     -- Replace paste operations with synthetic type events.
     local clipboard_text
@@ -442,7 +445,7 @@ ugui.end_frame = function()
         )
     end
 
-    ---@param node SceneNode
+    ---@param node _UguiInternalSceneNode
     local function draw_scene_node(node, transition_opacity)
         transition_opacity = transition_opacity or 1
         local control = node.control
@@ -549,29 +552,31 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class SceneNode
+---@class _UguiInternalSceneNode
 ---@field public control UguiControl
 ---@field public type string
----@field public parent SceneNode|SceneRoot
----@field public children SceneNode[]
----@field public sorted_children SceneNode[]?
+---@field public parent _UguiInternalSceneNode|_UguiInternalSceneRoot
+---@field public children _UguiInternalSceneNode[]
+---@field public sorted_children _UguiInternalSceneNode[]?
 ---@field public order integer
 ---@field public is_enabled boolean The control's effective enabled state, including its ancestors.
 ---@field public exiting boolean? Whether this is a non-interactive retained exit visual.
+---@field public visual_state UguiVisualState? The last live visual state, preserved for retained exit visuals.
 ---@field public transition_shell boolean? Whether only this node's geometry and clipping remain for descendant exits.
 ---@field public scroll_x number? Horizontal content offset in pixels.
 ---@field public scroll_y number? Vertical content offset in pixels.
 ---@field public overflow_range_x number? Horizontal scroll range in pixels.
 ---@field public overflow_range_y number? Vertical scroll range in pixels.
+---@field public overflow_wheel_y_consumed boolean? Whether this node used the current frame's vertical wheel input.
 ---@field public overflow_viewport {width: number, height: number}? Content viewport excluding scrollbars.
 
----@class SceneRoot
----@field public children SceneNode[]
----@field public sorted_children SceneNode[]?
+---@class _UguiInternalSceneRoot
+---@field public children _UguiInternalSceneNode[]
+---@field public sorted_children _UguiInternalSceneNode[]?
 
----@class ControlState
----@field public type string The type last used with this resolved UID.
----@field public frame integer The most recent frame in which this resolved UID was placed.
+---@class _UguiInternalControlState
+---@field public type string The type last used with this resolved UguiUID.
+---@field public frame integer The most recent frame in which this resolved UguiUID was placed.
 
 local unpack_values = table.unpack or unpack
 local function pack_values(...)
@@ -579,14 +584,14 @@ local function pack_values(...)
 end
 
 ugui.internal = {
-    ---@type SceneRoot
+    ---@type _UguiInternalSceneRoot
     scene_root = {children = {}},
 
-    ---@type table<ResolvedUID, SceneNode>
-    ---Current scene nodes indexed by their control's resolved UID.
+    ---@type table<UguiResolvedUID, _UguiInternalSceneNode>
+    ---Current scene nodes indexed by their control's resolved UguiUID.
     scene_nodes_by_uid = {},
 
-    ---@type (SceneNode|SceneRoot)?
+    ---@type (_UguiInternalSceneNode|_UguiInternalSceneRoot)?
     current_parent = nil,
 
     ---@type integer
@@ -595,43 +600,46 @@ ugui.internal = {
     ---@type Painter
     painter = nil,
 
-    ---@type table<ResolvedUID, ControlState>
+    ---@type table<UguiResolvedUID, _UguiInternalControlState>
     control_types = {},
 
     ---@type integer
     frame_index = 0,
 
-    ---@type table<ResolvedUID, any>
+    ---@type table<UguiResolvedUID, any>
     ---Map of control UIDs to their data.
     control_data = {},
 
-    ---@type { owner_uid: ResolvedUID, items: MenuItem[], position: UguiVector2, opened_frame: integer }?
+    ---@type { owner_uid: UguiResolvedUID, items: UguiMenuItem[], position: UguiVector2, opened_frame: integer }?
     ---The single currently open control context menu.
     context_menu_state = nil,
 
     ---Whether the current context-menu owner has been placed in this frame.
     context_menu_owner_seen = false,
 
-    ---Whether the internal control with UID -1 is being placed for a context menu.
+    ---Whether the internal control with UguiUID -1 is being placed for a context menu.
     context_menu_placing = false,
 
-    ---Reserved UID for the global context menu control.
+    ---Reserved UguiUID for the global context menu control.
     context_menu_uid = -1,
 
-    ---@type table<ResolvedUID, number>
+    ---@type table<UguiResolvedUID, number>
     ---Execution time, in seconds, accumulated for each control during the current frame.
     control_execution_times = {},
 
-    ---@type table<ResolvedUID, number>
+    ---@type table<UguiResolvedUID, number>
     ---Draw time, in seconds, accumulated for each control during the current frame.
     control_draw_times = {},
 
 
-    ---@type Environment
+    ---Whether the primary mouse button is held, maintained from mouse events.
+    is_primary_down = false,
+
+    ---@type UguiEnvironment
     ---The environment for the current frame.
     environment = nil,
 
-    ---@type Environment
+    ---@type UguiEnvironment
     ---The environment for the previous frame.
     previous_environment = nil,
 
@@ -639,27 +647,30 @@ ugui.internal = {
     -- The position of the mouse the last time the primary button was pressed.
     mouse_down_position = {x = 0, y = 0},
 
-    ---@type ResolvedUID?
+    ---@type UguiResolvedUID?
     ---The control that was clicked this frame.
     clicked_control = nil,
 
-    ---@type ResolvedUID?
+    ---@type UguiResolvedUID?
     ---The control that was double-clicked this frame.
     doubleclicked_control = nil,
 
-    ---@type ResolvedUID?
+    ---@type UguiResolvedUID?
     ---The control that was triple-clicked this frame.
     tripleclicked_control = nil,
 
-    ---@type ResolvedUID?
+    ---@type UguiResolvedUID?
     ---The control that is being hovered over.
     hovered_control = nil,
 
-    ---@type ResolvedUID?
+    ---@type UguiResolvedUID?
+    wheel_hovered_control = nil,
+
+    ---@type UguiResolvedUID?
     ---The control that is currently capturing mouse inputs.
     mouse_captured_control = nil,
 
-    ---@type ResolvedUID?
+    ---@type UguiResolvedUID?
     ---The control that is currently capturing keyboard inputs. Synonymous to a "focused" control.
     keyboard_captured_control = nil,
 
@@ -699,11 +710,11 @@ ugui.internal = {
     ---Smoothed one-second rolling averages of end_frame section durations, in seconds.
     average_debug_end_frame_times = {},
 
-    ---@type { t: number, controls: table<ResolvedUID, { execution_time: number, draw_time: number }> }[]
+    ---@type { t: number, controls: table<UguiResolvedUID, { execution_time: number, draw_time: number }> }[]
     ---Recent control timing samples used by the debug overlay.
     debug_control_time_samples = {},
 
-    ---@type table<ResolvedUID, { execution_time: number, draw_time: number }>
+    ---@type table<UguiResolvedUID, { execution_time: number, draw_time: number }>
     ---Smoothed one-second rolling averages of per-control timings, in seconds.
     average_debug_control_times = {},
 
@@ -713,7 +724,7 @@ ugui.internal = {
     ---The section selected in the debug timing pie, or nil for the Internals overview.
     debug_timing_view = nil,
 
-    ---Whether debug control timing charts aggregate controls by type instead of UID.
+    ---Whether debug control timing charts aggregate controls by type instead of UguiUID.
     debug_control_time_group_by_type = true,
 
     ---Whether the debug timing panel is minimized.
@@ -734,7 +745,7 @@ ugui.internal = {
     colorpicker_circle_image = nil,
 
     ---Runs a callback with a temporary scene parent, then restores the previous parent.
-    ---@param parent SceneNode|SceneRoot
+    ---@param parent _UguiInternalSceneNode|_UguiInternalSceneRoot
     ---@param fn fun(): ...
     ---@return ...
     with_parent = function(parent, fn)
@@ -754,18 +765,31 @@ ugui.internal = {
         }
     end,
 
+    ---@param event MouseEventArgs
+    ---@return boolean
+    is_primary_press = function(event)
+        return event.button == 0 and (event.pressed == true
+            or (event.pressed == nil and (event.double_click == true or event.triple_click == true)))
+    end,
+
     ---@return boolean # Whether LMB was just pressed.
     is_mouse_just_down = function()
-        local value = ugui.internal.environment.is_primary_down and
-            not ugui.internal.previous_environment.is_primary_down
-        return value and true or false
+        for _, event in ipairs(ugui.internal.environment.mouse_events) do
+            if ugui.internal.is_primary_press(event) then
+                return true
+            end
+        end
+        return false
     end,
 
     ---@return boolean # Whether LMB was just released.
     is_mouse_just_up = function()
-        local value = not ugui.internal.environment.is_primary_down and
-            ugui.internal.previous_environment.is_primary_down
-        return value and true or false
+        for _, event in ipairs(ugui.internal.environment.mouse_events) do
+            if event.button == 0 and event.pressed == false then
+                return true
+            end
+        end
+        return false
     end,
 
     ---@return boolean # Whether the mouse wheel was just moved up.
@@ -889,7 +913,7 @@ ugui.internal = {
     end,
 
     ---Handles transitions between signal change state.
-    ---@param signal_change_state SignalChangeState The control's current signal change state.
+    ---@param signal_change_state UguiSignalChangeState The control's current signal change state.
     ---@param signal_changing boolean Whether the control's signal is changing.
     process_signal_changes = function(signal_change_state, signal_changing)
         if signal_change_state == ugui.signal_change_states.started then
@@ -939,8 +963,8 @@ ugui.internal = {
     end,
 
     ---Parses rich text into content segments.
-    ---@param text RichText The rich text to parse.
-    ---@return RichTextSegment[] # The content segments.
+    ---@param text UguiRichText The rich text to parse.
+    ---@return UguiRichTextSegment[] # The content segments.
     parse_rich_text = function(text)
         local segments = {}
         local pattern = '(.-)%[icon:([^%]:]+)(:?)([^%]]*)%]'
@@ -1000,10 +1024,18 @@ ugui.internal = {
 
         local prev_hovered_control = ugui.internal.hovered_control
         ugui.internal.hovered_control = nil
+        ugui.internal.wheel_hovered_control = nil
 
         ugui.internal.foreach_scene_node(function(entry)
             local control = entry.control
             local effective_hittestable = control.hittestable ~= false
+
+            local wheel_hittestable = effective_hittestable
+                or (entry.overflow_range_x or 0) > 0 or (entry.overflow_range_y or 0) > 0
+            if ugui.internal.wheel_hovered_control == nil and wheel_hittestable
+                and ugui.internal.hittest_node(ugui.internal.environment.mouse_position, entry) then
+                ugui.internal.wheel_hovered_control = control._uid
+            end
 
             -- Determine the clicked control if we haven't already
             if clicked_control == nil and effective_hittestable then
@@ -1065,13 +1097,14 @@ ugui.internal = {
         end
 
         -- Clear the mouse captured control if we released the mouse
-        if not ugui.internal.environment.is_primary_down then
+        if not ugui.internal.is_primary_down then
             mouse_captured_control = nil
         end
 
         -- If we have a captured control, the hovered control must be locked to that as well.
         if mouse_captured_control ~= nil then
             ugui.internal.hovered_control = mouse_captured_control.control._uid
+            ugui.internal.wheel_hovered_control = mouse_captured_control.control._uid
         end
 
         -- If the clicked control is disabled, we clear it now at the end of input processing, effectively "swallowing" the click.
@@ -1148,7 +1181,7 @@ ugui.internal = {
 ---@param control_type string The control's type.
 ---@param fn fun()? A callback invoked after placement. Controls placed by the callback become children of this control.
 ---@param initialize_data fun(control: UguiControl, data: any)? Initializes control-specific data on first placement.
----@return ControlReturnValue # The control's return value.
+---@return UguiControlReturnValue # The control's return value.
 local control_impl = function(control, control_type, fn, initialize_data)
     ugui.internal.assert(control_type ~= '', 'empty control_type is no longer allowed')
     local previous_node = ugui.internal.scene_nodes_by_uid[control._uid]
@@ -1157,7 +1190,7 @@ local control_impl = function(control, control_type, fn, initialize_data)
     end
     control._uid = ugui.internal.resolve_uid(control.uid)
     if control._uid == ugui.internal.context_menu_uid and not ugui.internal.context_menu_placing then
-        error('UID -1 is reserved for the global context menu.', 2)
+        error('UguiUID -1 is reserved for the global context menu.', 2)
     end
 
     local get_return_value = control.get_return_value or ugui.internal.default_get_return_value
@@ -1197,7 +1230,7 @@ local control_impl = function(control, control_type, fn, initialize_data)
                 'Attempted to show a control with uid %s, which is already in use at this hierarchy level!',
                 control._uid))
         elseif stored_control_type.type ~= control_type then
-            error(string.format('Attempted to reuse UID %s of %s for %s.', control._uid,
+            error(string.format('Attempted to reuse UguiUID %s of %s for %s.', control._uid,
                 stored_control_type.type, control_type))
         end
     end
@@ -1677,8 +1710,8 @@ ugui.internal.remap = function(value, from1, to1, from2, to2)
 end
 
 ---Returns scene children in stable z-index order without reordering the placement array.
----@param node SceneNode|SceneRoot
----@return SceneNode[]
+---@param node _UguiInternalSceneNode|_UguiInternalSceneRoot
+---@return _UguiInternalSceneNode[]
 ugui.internal.get_sorted_scene_children = function(node)
     if not node.sorted_children then
         local children = node.children
@@ -1717,8 +1750,8 @@ ugui.internal.get_sorted_scene_children = function(node)
 end
 
 ---Traverses a scene tree depth-first.
----@param node SceneNode
----@param callback fun(node: SceneNode): boolean? Return false to stop traversal early.
+---@param node _UguiInternalSceneNode
+---@param callback fun(node: _UguiInternalSceneNode): boolean? Return false to stop traversal early.
 ---@param reverse boolean? Traverse in reverse draw order.
 ---@return boolean completed Whether the traversal completed without being stopped.
 ugui.internal.foreach_node = function(node, callback, reverse)
@@ -1744,7 +1777,7 @@ ugui.internal.foreach_node = function(node, callback, reverse)
 end
 
 ---Traverses all nodes in the current scene, excluding the virtual root.
----@param callback fun(node: SceneNode): boolean? Return false to stop traversal early.
+---@param callback fun(node: _UguiInternalSceneNode): boolean? Return false to stop traversal early.
 ---@param reverse boolean? Traverse in reverse draw order.
 ---@return boolean completed Whether the traversal completed without being stopped.
 ugui.internal.foreach_scene_node = function(callback, reverse)
@@ -1773,9 +1806,9 @@ local function uid_segment(uid)
     return integer and string.format('%d', integer) or string.format('%.17g', uid)
 end
 
----Resolves a local UID against the current scene parent. Strings are private, already-resolved IDs.
----@param uid UID|ResolvedUID
----@return ResolvedUID
+---Resolves a local UguiUID against the current scene parent. Strings are private, already-resolved IDs.
+---@param uid UguiUID|UguiResolvedUID
+---@return UguiResolvedUID
 ugui.internal.resolve_uid = function(uid)
     if type(uid) == 'string' then
         return uid
@@ -1792,7 +1825,7 @@ end
 ---Resolves an owned local ID independently of the child's scene parent.
 ---@param control UguiControl
 ---@param slot integer
----@return ResolvedUID
+---@return UguiResolvedUID
 ugui.internal.child_uid = function(control, slot)
     local node = ugui.internal.scene_nodes_by_uid[control._uid]
     local uid = node and node.control == control and control._uid or ugui.internal.resolve_uid(control.uid)
@@ -1801,7 +1834,7 @@ end
 
 ---Tests ownership even for private controls reparented to the scene root, such as popups.
 ---@param control UguiControl
----@param uid ResolvedUID?
+---@param uid UguiResolvedUID?
 ---@return boolean
 ugui.internal.is_owned_uid = function(control, uid)
     if uid == nil then
@@ -1811,9 +1844,9 @@ ugui.internal.is_owned_uid = function(control, uid)
     return uid == control._uid or uid_segment(uid):sub(1, #prefix) == prefix
 end
 
----Finds a scene node by the resolved UID of its control.
----@param uid ResolvedUID?
----@return SceneNode?
+---Finds a scene node by the resolved UguiUID of its control.
+---@param uid UguiResolvedUID?
+---@return _UguiInternalSceneNode?
 ugui.internal.find_node = function(uid)
     if uid == nil then
         return nil
@@ -1830,7 +1863,7 @@ ugui.internal.get_overflow_modes = function(control, control_type)
     return x_mode, y_mode
 end
 
----@param control ListBox
+---@param control UguiListBox
 ---@return UguiRect
 ugui.internal.get_listbox_viewport = function(control)
     local rect = control._render_rect
@@ -1839,8 +1872,8 @@ ugui.internal.get_listbox_viewport = function(control)
 end
 
 ---Returns the per-axis clipping bounds for a child, or nil when both axes are visible.
----@param node SceneNode
----@param child SceneNode
+---@param node _UguiInternalSceneNode
+---@param child _UguiInternalSceneNode
 ---@return UguiRect?
 ugui.internal.get_child_clip_rect = function(node, child)
     local control = node.control
@@ -1925,7 +1958,7 @@ ugui.internal.measure_overflow = function(control, control_type, node)
 end
 
 ---Finalizes a control's viewport and places its reserved scrollbar children.
----@param node SceneNode
+---@param node _UguiInternalSceneNode
 ugui.internal.layout_overflow = function(node)
     local control = node.control
     local x_mode, y_mode = ugui.internal.get_overflow_modes(control, node.type)
@@ -1954,7 +1987,7 @@ ugui.internal.layout_overflow = function(node)
     node.overflow_range_x = show_x and range_x or 0
     node.overflow_range_y = show_y and range_y or 0
     -- Route each wheel axis to the nearest ancestor that can scroll that axis.
-    local hovered_uid = ugui.internal.hovered_control
+    local hovered_uid = ugui.internal.wheel_hovered_control
     local hovered = ugui.internal.find_node(hovered_uid)
     if hovered_uid == ugui.internal.child_uid(control, -1)
         or hovered_uid == ugui.internal.child_uid(control, -2) then
@@ -1978,7 +2011,9 @@ ugui.internal.layout_overflow = function(node)
                 end
                 if show_y and range_y > 0 then
                     local step = node.type == 'listbox' and 1 / math.max(1, #control.items) or 30 / range_y
-                    data.ugui_scroll_y = ugui.internal.clamp(data.ugui_scroll_y - dy * step, 0, 1)
+                    local previous_scroll_y = data.ugui_scroll_y
+                    data.ugui_scroll_y = ugui.internal.clamp(previous_scroll_y - dy * step, 0, 1)
+                    node.overflow_wheel_y_consumed = data.ugui_scroll_y ~= previous_scroll_y
                 end
             end
             break
@@ -1986,7 +2021,7 @@ ugui.internal.layout_overflow = function(node)
         if (hovered.overflow_range_x or 0) > 0 then
             dx = 0
         end
-        if (hovered.overflow_range_y or 0) > 0 then
+        if hovered.overflow_wheel_y_consumed then
             dy = 0
         end
         hovered = hovered.parent
@@ -2063,7 +2098,7 @@ end
 
 ---Checks whether a point is inside every clipping ancestor of a node.
 ---@param point UguiVector2
----@param node SceneNode
+---@param node _UguiInternalSceneNode
 ---@return boolean
 ugui.internal.is_point_inside_clip_ancestors = function(point, node)
     local ancestor = node.parent
@@ -2084,7 +2119,7 @@ end
 
 ---Checks a scene node's own bounds and all clipping ancestor bounds.
 ---@param point UguiVector2
----@param node SceneNode
+---@param node _UguiInternalSceneNode
 ---@return boolean
 ugui.internal.hittest_node = function(point, node)
     local ancestor = node
@@ -2603,6 +2638,7 @@ ugui.internal.save_transition_scene = function()
         end
         if not animated and #children == 0 then return nil end
         local saved = shallow_copy(node)
+        saved.visual_state = ugui.get_visual_state(control)
         saved.children, saved.sorted_children, saved.parent = children, nil, nil
         saved.control = shallow_copy(control)
         saved.control.rectangle = shallow_copy(control.rectangle)
@@ -2630,7 +2666,7 @@ end
 ---@field rectangle UguiRect The rich text's bounds.
 ---@field align_x UguiAlignment? The rich text's horizontal alignment inside the rectangle. If nil, the default is assumed.
 ---@field align_y UguiAlignment? The rich text's vertical alignment inside the rectangle. If nil, the default is assumed.
----@field text RichText The rich text.
+---@field text UguiRichText The rich text.
 ---@field color UguiRGBA8 The rich text's color. If a rich text segment contains a color, it is used instead.
 ---@field plaintext boolean? Whether the text is drawn without rich formatting. If nil, false is assumed.
 ---@field font_name string? The font name to use for the text. If nil, the default is assumed.
@@ -3024,11 +3060,11 @@ ugui.standard_styler = {
     end,
 
     ---Computes the segment data of rich text.
-    ---@param text RichText The rich text.
+    ---@param text UguiRichText The rich text.
     ---@param plaintext boolean? Whether the text is drawn without rich formatting. If nil, false is assumed.
     ---@param font_name string The font name to use for the text.
     ---@param font_size number The font size to use for the text.
-    ---@return { segment_data: { segment: RichTextSegment, rectangle: UguiRect }[], size: UguiVector2  } # The computed rich text segment data.
+    ---@return { segment_data: { segment: UguiRichTextSegment, rectangle: UguiRect }[], size: UguiVector2  } # The computed rich text segment data.
     compute_rich_text = function(text, plaintext, font_name, font_size)
         if not text then
             return {segment_data = {}, size = {x = 0, y = 0}}
@@ -3258,7 +3294,7 @@ ugui.standard_styler = {
 
     ---Draws a raised frame with the specified parameters.
     ---@param control UguiControl The control table.
-    ---@param visual_state VisualState The control's visual state.
+    ---@param visual_state UguiVisualState The control's visual state.
     draw_raised_frame = function(control, visual_state)
         local rectangle = control._render_rect
         local p = ugui.internal.painter
@@ -3272,7 +3308,7 @@ ugui.standard_styler = {
 
     ---Draws an edit frame with the specified parameters.
     ---@param control UguiControl The control table.
-    ---@param visual_state VisualState The control's visual state.
+    ---@param visual_state UguiVisualState The control's visual state.
     draw_edit_frame = function(control, rectangle, visual_state)
         local p = ugui.internal.painter
         p:begin_path()
@@ -3285,7 +3321,7 @@ ugui.standard_styler = {
 
     ---Draws a list frame with the specified parameters.
     ---@param rectangle UguiRect The control bounds.
-    ---@param visual_state VisualState The control's visual state.
+    ---@param visual_state UguiVisualState The control's visual state.
     draw_list_frame = function(rectangle, visual_state)
         local p = ugui.internal.painter
         p:begin_path()
@@ -3297,7 +3333,7 @@ ugui.standard_styler = {
     end,
 
     ---Draws a scrollbar with the specified parameters.
-    ---@param control ScrollBar
+    ---@param control UguiScrollBar
     ---@param thumb_rectangle UguiRect The scrollbar thumb's bounds.
     draw_scrollbar = function(control, thumb_rectangle)
         local visual_state = ugui.get_visual_state(control)
@@ -3315,7 +3351,7 @@ ugui.standard_styler = {
     ---@param control UguiControl The associated list control.
     ---@param item string The list item's text.
     ---@param rectangle UguiRect The list item's bounds.
-    ---@param visual_state VisualState The control's visual state.
+    ---@param visual_state UguiVisualState The control's visual state.
     draw_list_item = function(control, item, rectangle, visual_state)
         if not item then
             return
@@ -3342,7 +3378,7 @@ ugui.standard_styler = {
     end,
 
     ---Draws a list with the specified parameters.
-    ---@param control ListBox The control table.
+    ---@param control UguiListBox The control table.
     ---@param rectangle UguiRect The list item's bounds.
     draw_list = function(control, rectangle)
         local visual_state = ugui.get_visual_state(control)
@@ -3399,7 +3435,7 @@ ugui.standard_styler = {
 
     ---Draws a menu frame with the specified parameters.
     ---@param rectangle UguiRect The control's bounds.
-    ---@param visual_state VisualState The control's visual state.
+    ---@param visual_state UguiVisualState The control's visual state.
     draw_menu_frame = function(rectangle, visual_state)
         local p = ugui.internal.painter
         p:begin_path()
@@ -3411,9 +3447,9 @@ ugui.standard_styler = {
     end,
 
     ---Draws a menu item with the specified parameters.
-    ---@param item MenuItem The menu item.
+    ---@param item UguiMenuItem The menu item.
     ---@param rectangle UguiRect The control's bounds.
-    ---@param visual_state VisualState The control's visual state.
+    ---@param visual_state UguiVisualState The control's visual state.
     draw_menu_item = function(item, rectangle, visual_state)
         local p = ugui.internal.painter
         p:begin_path()
@@ -3468,7 +3504,7 @@ ugui.standard_styler = {
     end,
 
     ---Draws a menu with the specified parameters.
-    ---@param control Menu The menu control.
+    ---@param control UguiMenu The menu control.
     ---@param rectangle UguiRect The control's bounds.
     ---@param hovered_index integer? The item to highlight for this menu level.
     draw_menu = function(control, rectangle, hovered_index)
@@ -3588,9 +3624,9 @@ ugui.standard_styler = {
         end
     end,
 
-    ---Draws a TextBox with the specified parameters.
-    ---@param control TextBox The control table.
-    ---@param visual_state VisualState The visual state.
+    ---Draws a UguiTextBox with the specified parameters.
+    ---@param control UguiTextBox The control table.
+    ---@param visual_state UguiVisualState The visual state.
     draw_textbox = function(control, visual_state)
         local data = ugui.internal.control_data[control._uid]
         local rectangle = control._render_rect
@@ -3712,9 +3748,9 @@ ugui.standard_styler = {
         p:restore()
     end,
 
-    ---Draws a Joystick with the specified parameters.
-    ---@param control Joystick The control table.
-    ---@param visual_state VisualState The visual state.
+    ---Draws a UguiJoystick with the specified parameters.
+    ---@param control UguiJoystick The control table.
+    ---@param visual_state UguiVisualState The visual state.
     draw_joystick = function(control, visual_state)
         local rectangle = control._render_rect
         local x = control.position and control.position.x or 0
@@ -3823,9 +3859,9 @@ ugui.standard_styler = {
         p:fill(ugui.internal.color_source_to_painter_color(ugui.standard_styler.params.trackbar.back[visual_state]))
     end,
 
-    ---Draws a Trackbar's thumb with the specified parameters.
-    ---@param control Trackbar The control table.
-    ---@param visual_state VisualState The control's visual state.
+    ---Draws a UguiTrackbar's thumb with the specified parameters.
+    ---@param control UguiTrackbar The control table.
+    ---@param visual_state UguiVisualState The control's visual state.
     ---@param is_horizontal boolean Whether the trackbar is horizontal.
     ---@param value number The trackbar's value.
     draw_thumb = function(control, visual_state, is_horizontal, value)
@@ -3859,8 +3895,8 @@ ugui.standard_styler = {
         p:fill(ugui.internal.color_source_to_painter_color(ugui.standard_styler.params.trackbar.thumb[visual_state]))
     end,
 
-    ---Draws a Trackbar with the specified parameters.
-    ---@param control Trackbar The control table.
+    ---Draws a UguiTrackbar with the specified parameters.
+    ---@param control UguiTrackbar The control table.
     draw_trackbar = function(control)
         local rectangle = control._render_rect
         local visual_state = ugui.get_visual_state(control)
@@ -3877,7 +3913,7 @@ ugui.standard_styler = {
     end,
 
     ---Draws a square saturation/value color picker with its hue band.
-    ---@param control ColorPicker The control table.
+    ---@param control UguiColorPicker The control table.
     ---@param square UguiRect The square saturation/value field.
     ---@param band UguiRect The band's bounds.
     ---@param hue number The selected hue in the range 0-1.
@@ -3988,7 +4024,7 @@ ugui.standard_styler = {
     end,
 
     ---Draws a hue/saturation color wheel with a value band.
-    ---@param control ColorPicker The control table.
+    ---@param control UguiColorPicker The control table.
     ---@param circle UguiRect The square bounds of the color wheel.
     ---@param band UguiRect The value band's bounds.
     ---@param hue number The selected hue in the range 0-1.
@@ -4104,8 +4140,8 @@ ugui.standard_styler = {
         p:stroke(control.is_enabled == false and '#808080' or '#000000', {width = 1})
     end,
 
-    ---Draws a ListBox with the specified parameters.
-    ---@param control ListBox The control table.
+    ---Draws a UguiListBox with the specified parameters.
+    ---@param control UguiListBox The control table.
     draw_listbox = function(control)
         ugui.standard_styler.draw_list(control, ugui.internal.get_listbox_viewport(control))
     end,
@@ -4173,7 +4209,7 @@ local debug_uid_provider = (function()
 end)()
 
 ---Updates debug overlay options in response to keyboard shortcuts.
----@param environment Environment The environment for the current frame.
+---@param environment UguiEnvironment The environment for the current frame.
 ---@return number scale The scale to use for the current frame.
 ugui.internal.update_debug_scale = function(environment)
     if not ugui.DEBUG then
@@ -4311,7 +4347,7 @@ ugui.internal.add_debug_overlay_controls = function()
                 if ugui.button({
                         uid = uids.grouping_button,
                         rectangle = {x = layout.panel_width - 72, y = 90, width = 58, height = 14},
-                        text = ugui.internal.debug_control_time_group_by_type and 'Type' or 'UID',
+                        text = ugui.internal.debug_control_time_group_by_type and 'Type' or 'UguiUID',
                         tooltip = 'Toggle grouping (Ctrl+G)',
                         z_index = 2,
                     }) then
@@ -4539,7 +4575,7 @@ ugui.internal.update_debug_frame_time = function(current_time)
 end
 
 ---Records time spent executing a control.
----@param uid ResolvedUID The control's resolved UID.
+---@param uid UguiResolvedUID The control's resolved UguiUID.
 ---@param start_time number The os.clock time before execution began.
 ugui.internal.record_control_execution_time = function(uid, start_time)
     if not ugui.DEBUG then
@@ -4551,7 +4587,7 @@ ugui.internal.record_control_execution_time = function(uid, start_time)
 end
 
 ---Records time spent drawing a control.
----@param uid ResolvedUID The control's resolved UID.
+---@param uid UguiResolvedUID The control's resolved UguiUID.
 ---@param start_time number The os.clock time before drawing began.
 ugui.internal.record_control_draw_time = function(uid, start_time)
     if not ugui.DEBUG then
@@ -4614,7 +4650,7 @@ ugui.internal.draw_debug_overlay = function()
     ugui.internal.foreach_scene_node(function(node)
         local uid = node.control._uid
         local is_debug_control = false
-        ---@type SceneNode|SceneRoot?
+        ---@type _UguiInternalSceneNode|_UguiInternalSceneRoot?
         local ancestor = node
         while debug_uids and ancestor and ancestor ~= ugui.internal.scene_root do
             if ancestor.control._uid == debug_uids.panel then
@@ -4953,11 +4989,11 @@ end
 
 
 ---@class UguiControl
----@field public uid UID|ResolvedUID The control's local numeric identifier, unique among siblings and stable across frames. Ancestors scope its persistent state. Negative local IDs are reserved for built-in children (-1 and -2 for horizontal and vertical overflow scrollbars), leaving non-negative sibling IDs available to callers. Resolved string IDs are reserved for library-owned controls.
+---@field public uid UguiUID|UguiResolvedUID The control's local numeric identifier, unique among siblings and stable across frames. Ancestors scope its persistent state. Negative local IDs are reserved for built-in children (-1 and -2 for horizontal and vertical overflow scrollbars), leaving non-negative sibling IDs available to callers. Resolved string IDs are reserved for library-owned controls.
 ---@field public draw (fun(control: UguiControl))? Draws the control. Use `control._render_rect` instead of `control.rectangle`.
 ---@field public measure (fun(control: UguiControl, constraint: UguiVector2): UguiVector2?)? Computes the desired content size given the constraints. Returning nil means using child sizes. Must not mutate `control`.
 ---@field public hittest (fun(control: UguiControl, point: UguiVector2): boolean)? Provides hittesting for the control. By default, the check is whether the point is inside `control._render_rect`.
----@field public get_return_value (fun(control: UguiControl, data: any): ControlReturnValue)? Computes the control's current return value and updates its data; use `control._render_rect` for absolute bounds.
+---@field public get_return_value (fun(control: UguiControl, data: any): UguiControlReturnValue)? Computes the control's current return value and updates its data; use `control._render_rect` for absolute bounds.
 ---@field public hittestable boolean? Whether this control instance participates in hit-testing. Defaults to `true`, except controls with a different placement default, such as labels and panels. Set this to `true` or `false` to override the default.
 ---@field public styler_mixin any? An optional styler mixin table which can override specific styler parameters for this control. Inherited by children.
 ---@field public rectangle UguiRect The control's rectangle relative to its parent's origin. Top-level controls are relative to the scene origin.
@@ -4965,7 +5001,7 @@ end
 ---@field public y_overflow UguiOverflow? Vertical overflow behavior for child controls. Defaults to `ugui.overflow.visible`.
 ---@field public is_enabled boolean? Whether the control is enabled. If nil or true, the control is enabled. A disabled ancestor disables this control too.
 ---@field public tooltip string? The control's tooltip. If nil, no tooltip will be shown.
----@field public context_menu MenuItem[]? Items shown in a context menu when this control is right-clicked.
+---@field public context_menu UguiMenuItem[]? Items shown in a context menu when this control is right-clicked.
 ---@field public plaintext boolean? Whether the control's text content is drawn as plain text without rich rendering.
 ---@field public z_index integer? The control's Z-index. If nil, `0` is assumed.
 ---@field public opacity number? The control's opacity, normally in [0, 1]. Defaults to 1.
@@ -4975,8 +5011,8 @@ end
 ---@field public cy number? The control's vertical transform origin in pixels relative to the control's origin. Used by `sx`/`sy`. Defaults to `rectangle.height / 2`.
 ---@field public sx number? The control's horizontal scale factor. Affects hittesting and rendering, but not layout. Defaults to `1`.
 ---@field public sy number? The control's vertical scale factor. Affects hittesting and rendering, but not layout. Defaults to `1`.
----@field public in_transition UguiTransition? Runs when this UID starts being placed, with progress from 0 to 1. Does not affect layout.
----@field public out_transition UguiTransition? Runs when this UID stops being placed, with progress from 1 to 0. The previous visual is retained without accepting input or running placement callbacks until the exit completes.
+---@field public in_transition UguiTransition? Runs when this UguiUID starts being placed, with progress from 0 to 1. Does not affect layout.
+---@field public out_transition UguiTransition? Runs when this UguiUID stops being placed, with progress from 1 to 0. The previous visual is retained without accepting input or running placement callbacks until the exit completes.
 ---@field public transition UguiTransition? Fallback for both `in_transition` and `out_transition`. Explicit per-direction transitions take precedence. Reappearing during an exit reverses from the current progress.
 ---@field public fill UguiColorSource? The control's fill color. The fill is drawn before the control graphics. If nil, no fill will be drawn.
 ---@field public stroke UguiColorSource? The control's stroke color. The stroke is drawn after the control graphics. If nil, no stroke will be drawn.
@@ -4988,7 +5024,7 @@ end
 ---@field public background_size UguiBackgroundSize? Background image dimensions in pixels, `"auto"`, `"cover"`, or `"contain"`. Requires `background_image`.
 ---@field public background_nineslice_source PainterRect? Source rectangle for nine-slice rendering. Requires `background_image` and `background_nineslice_center`.
 ---@field public background_nineslice_center PainterRect? Center rectangle for nine-slice rendering. Requires `background_image` and `background_nineslice_source`.
----@field public _uid ResolvedUID? **Internal, only use when authoring controls.** The resolved hierarchical identifier. Use this for state lookups and input identity comparisons, not `uid`.
+---@field public _uid UguiResolvedUID? **Internal, only use when authoring controls.** The resolved hierarchical identifier. Use this for state lookups and input identity comparisons, not `uid`.
 ---@field public _render_rect UguiRect? **Internal, only use when authoring controls.** The control's effective rectangle.
 ---@field public _t_opacity number? **Internal, only use when authoring transitions.** Opacity override, clamped for rendering without mutating `opacity`.
 ---@field public _t_tx number? **Internal, only use when authoring transitions.** Horizontal translation override.
@@ -5007,13 +5043,13 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class Panel : UguiControl
+---@class UguiPanel : UguiControl
 ---A non-interactive surface.
 
----Places a Panel.
----@param control Panel The control table.
+---Places a UguiPanel.
+---@param control UguiPanel The control table.
 ---@param fn fun()? A callback whose placed controls become children of the panel.
----@return nil, Meta # Nothing.
+---@return nil, UguiMeta # Nothing.
 ugui.panel = function(control, fn)
     if control.hittestable == nil then
         control.hittestable = false
@@ -5033,8 +5069,8 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class Label : UguiControl
----@field public text RichText The text.
+---@class UguiLabel : UguiControl
+---@field public text UguiRichText The text.
 ---@field public color UguiRGBA8 The color of the text.
 ---@field public font_size number? The font size of the text. If `nil`, the default font size is used.
 ---@field public font_name string? The font family of the text. If `nil`, the default font family is used.
@@ -5061,10 +5097,10 @@ local label_draw = function(control)
     })
 end
 
----Places a Label.
----@param control Label The control table.
+---Places a UguiLabel.
+---@param control UguiLabel The control table.
 ---@param fn fun()? A callback whose placed controls become children of the label.
----@return nil, Meta # Nothing.
+---@return nil, UguiMeta # Nothing.
 ugui.label = function(control, fn)
     ugui.internal.assert(type(control.text) == 'string', 'expected text to be string')
     ugui.internal.assert(type(control.color) == 'table', 'expected color to be table')
@@ -5094,15 +5130,15 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class Button : UguiControl
----@field public text RichText The text displayed on the button.
+---@class UguiButton : UguiControl
+---@field public text UguiRichText The text displayed on the button.
 ---A button which can be clicked.
 
 local button_label_uid<const> = -3
 
----@param control Button
+---@param control UguiButton
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function button_get_return_value(control, data)
     local pressed = ugui.internal.clicked_control == control._uid
 
@@ -5122,10 +5158,10 @@ local button_draw = function(control)
     ugui.standard_styler.draw_raised_frame(control, visual_state)
 end
 
----Places a Button.
----@param control Button The control table.
+---Places a UguiButton.
+---@param control UguiButton The control table.
 ---@param fn fun()? A callback whose placed controls become children of the button.
----@return boolean, Meta # Whether the button has been pressed.
+---@return boolean, UguiMeta # Whether the button has been pressed.
 ugui.button = function(control, fn)
     ugui.internal.assert(type(control.text) == 'string', 'expected text to be string')
     control.draw = control.draw or button_draw
@@ -5158,15 +5194,15 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class ToggleButton : Button
----@field public is_checked boolean? Whether the button is checked. If nil, the ToggleButton is considered unchecked.
+---@class UguiToggleButton : UguiButton
+---@field public is_checked boolean? Whether the button is checked. If nil, the UguiToggleButton is considered unchecked.
 ---A button which can be toggled on and off.
 
 local toggle_button_label_uid<const> = -3
 
----@param control ToggleButton
+---@param control UguiToggleButton
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function toggle_button_get_return_value(control, data)
     data.is_checked = control.is_checked
 
@@ -5195,10 +5231,10 @@ local toggle_button_draw = function(control)
     ugui.standard_styler.draw_raised_frame(control, visual_state)
 end
 
----Places a ToggleButton.
----@param control ToggleButton The control table.
+---Places a UguiToggleButton.
+---@param control UguiToggleButton The control table.
 ---@param fn fun()? A callback whose placed controls become children of the toggle button.
----@return boolean, Meta # The new check state.
+---@return boolean, UguiMeta # The new check state.
 ugui.toggle_button = function(control, fn)
     ugui.internal.assert(type(control.text) == 'string', 'expected text to be string')
     ugui.internal.assert(type(control.is_checked) == 'boolean', 'expected is_checked to be boolean')
@@ -5222,7 +5258,7 @@ ugui.toggle_button = function(control, fn)
             fn()
         end
     end)
-    ---@cast result ControlReturnValue
+    ---@cast result UguiControlReturnValue
 
     return result.primary, result.meta
 end
@@ -5237,7 +5273,7 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class CarrouselButton : UguiControl
+---@class UguiCarrouselButton : UguiControl
 ---@field public items string[] The items contained in the carrousel button.
 ---@field public selected_index integer The index of the currently selected item into the items array.
 ---A button which can be toggled on and off.
@@ -5247,9 +5283,9 @@ local carrousel_button_label_left_uid<const> = -3
 local carrousel_button_label_text_uid<const> = -4
 local carrousel_button_label_right_uid<const> = -5
 
----@param control CarrouselButton
+---@param control UguiCarrouselButton
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function carrousel_button_get_return_value(control, data)
     data.selected_index = control.selected_index
     local rectangle = control._render_rect
@@ -5291,10 +5327,10 @@ local carrousel_button_draw = function(control)
     ugui.standard_styler.draw_raised_frame(control, visual_state)
 end
 
----Places a CarrouselButton.
----@param control CarrouselButton The control table.
+---Places a UguiCarrouselButton.
+---@param control UguiCarrouselButton The control table.
 ---@param fn fun()? A callback whose placed controls become children of the control.
----@return integer, Meta # The new selected index.
+---@return integer, UguiMeta # The new selected index.
 ugui.carrousel_button = function(control, fn)
     ugui.internal.assert(type(control.items) == 'table', 'expected items to be string[]')
     ugui.internal.assert(type(control.selected_index) == 'number', 'expected selected_index to be number')
@@ -5350,7 +5386,7 @@ ugui.carrousel_button = function(control, fn)
             fn()
         end
     end)
-    ---@cast result ControlReturnValue
+    ---@cast result UguiControlReturnValue
 
     return result.primary, result.meta
 end
@@ -5365,15 +5401,15 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class ScrollBar : UguiControl
+---@class UguiScrollBar : UguiControl
 ---@field public value number The scroll proportion in the range 0-1.
 ---@field public ratio number The overflow ratio, which is calculated by dividing the desired content dimensions by the relevant attached control's (e.g.: a listbox's) dimensions.
 ---@field private _overflow_axis "x"|"y"? Fixed orientation for an automatic overflow scrollbar.
 ---A scrollbar which allows scrolling horizontally or vertically, depending on the control's dimensions.
 
----@param control ScrollBar
+---@param control UguiScrollBar
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function scrollbar_get_return_value(control, data)
     data.value = control.value
     local rectangle = control._render_rect
@@ -5459,17 +5495,17 @@ local scrollbar_draw = function(control)
     ugui.standard_styler.draw_scrollbar(control, thumb_rectangle)
 end
 
----Places a ScrollBar.
----@param control ScrollBar The control table.
+---Places a UguiScrollBar.
+---@param control UguiScrollBar The control table.
 ---@param fn fun()? A callback whose placed controls become children of the scrollbar.
----@return number, Meta # The new value.
+---@return number, UguiMeta # The new value.
 ugui.scrollbar = function(control, fn)
     ugui.internal.assert(type(control.value) == 'number', 'expected value to be number')
     ugui.internal.assert(type(control.ratio) == 'number', 'expected ratio to be number')
     control.draw = control.draw or scrollbar_draw
     control.get_return_value = control.get_return_value or scrollbar_get_return_value
     local result = ugui.internal.control(control, 'scrollbar', fn)
-    ---@cast result ControlReturnValue
+    ---@cast result UguiControlReturnValue
     return result.primary, result.meta
 end
 
@@ -5483,8 +5519,8 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class ListBox : UguiControl
----@field public items RichText[] The items contained in the control.
+---@class UguiListBox : UguiControl
+---@field public items UguiRichText[] The items contained in the control.
 ---@field public selected_index integer? The index of the currently selected item into the items array. If `nil`, no item is selected.
 ---@field public horizontal_scroll boolean? Whether horizontal scrolling will be enabled when items go beyond the width of the control. Will impact performance greatly, use with care.
 ---A listbox which allows the user to choose from a list of items.
@@ -5494,9 +5530,9 @@ local function initialize_listbox_data(control, data)
     data.ugui_scroll_y = data.ugui_scroll_y or 0
 end
 
----@param control ListBox
+---@param control UguiListBox
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function listbox_get_return_value(control, data)
     data.selected_index = control.selected_index
 
@@ -5619,17 +5655,17 @@ local listbox_draw = function(control)
     ugui.standard_styler.draw_listbox(control)
 end
 
----@param control ListBox
+---@param control UguiListBox
 ---@return UguiVector2
 local function listbox_measure(control)
     local bounds = ugui.standard_styler.get_desired_listbox_content_bounds(control)
     return {x = control.horizontal_scroll and bounds.width or 1, y = bounds.height}
 end
 
----Places a ListBox.
----@param control ListBox The control table.
+---Places a UguiListBox.
+---@param control UguiListBox The control table.
 ---@param fn fun()? A callback whose placed controls become children of the listbox.
----@return integer, Meta # The new selected index.
+---@return integer, UguiMeta # The new selected index.
 ugui.listbox = function(control, fn)
     ugui.internal.assert(type(control.items) == 'table', 'expected items to be table')
     ugui.internal.assert(type(control.selected_index) == 'number' or type(control.selected_index) == 'nil',
@@ -5655,7 +5691,7 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class TextBox : UguiControl
+---@class UguiTextBox : UguiControl
 ---@field public text string The text contained in the textbox.
 ---@field public text_x_align Alignment? The text's horizontal alignment. Defaults to `alignment.start`.
 ---@field public history_size integer? The maximum history size. Defaults to `64`.
@@ -5729,9 +5765,9 @@ local function initialize_textbox_data(control, data)
     end
 end
 
----@param control TextBox
+---@param control UguiTextBox
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function textbox_get_return_value(control, data)
     local rectangle = control._render_rect
     data.text = control.text
@@ -6157,10 +6193,10 @@ local textbox_draw = function(control)
     ugui.standard_styler.draw_textbox(control, visual_state)
 end
 
----Places a TextBox.
----@param control TextBox The control table.
+---Places a UguiTextBox.
+---@param control UguiTextBox The control table.
 ---@param fn fun()? A callback whose placed controls become children of the textbox.
----@return string, Meta # The new text.
+---@return string, UguiMeta # The new text.
 ugui.textbox = function(control, fn)
     ugui.internal.assert(type(control.text) == 'string', 'expected text to be string')
     ugui.internal.assert(type(control.text_x_align) == 'number' or control.text_x_align == nil,
@@ -6183,8 +6219,8 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class ComboBox : UguiControl
----@field public items RichText[] The items contained in the control.
+---@class UguiComboBox : UguiControl
+---@field public items UguiRichText[] The items contained in the control.
 ---@field public selected_index integer? The index of the currently selected item into the items array. If nil, no item is selected.
 ---@field public editable boolean? Whether the user can type in the combobox to filter the items.
 ---@field public preview_change boolean? Whether the returned selected index can change while the combobox is open.
@@ -6204,9 +6240,9 @@ local function initialize_combobox_data(control, data)
     data.search_text = nil
 end
 
----@param control ComboBox
+---@param control UguiComboBox
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function combobox_get_return_value(control, data)
     if not ugui.internal.is_control_enabled(control) then
         data.open = false
@@ -6249,12 +6285,12 @@ local combobox_draw = function(control)
 end
 
 
----Places a ComboBox.
+---Places a UguiComboBox.
 ---
 ---When preview_change is set, `meta.signal_change == ugui.signal_change_states.ended` may be used to determine when the combobox was closed to confirm the new selection.
----@param control ComboBox The control table.
+---@param control UguiComboBox The control table.
 ---@param fn fun()? A callback whose placed controls become children of the combobox.
----@return integer selected_index, Meta meta The new selected index and metadata.
+---@return integer selected_index, UguiMeta meta The new selected index and metadata.
 ugui.combobox = function(control, fn)
     ugui.internal.assert(type(control.items) == 'table', 'expected items to be table')
     ugui.internal.assert(type(control.selected_index) == 'number' or type(control.selected_index) == 'nil',
@@ -6370,7 +6406,7 @@ ugui.combobox = function(control, fn)
         if control.editable then
             if data.update_filter then
                 data.update_filter = false
-                ---@type RichText[]
+                ---@type UguiRichText[]
                 data.filtered_items = {}
 
                 ---@type integer[]
@@ -6487,16 +6523,16 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class Joystick : UguiControl
+---@class UguiJoystick : UguiControl
 ---@field public position UguiVector2 The joystick's position with the range 0-128 on both axes.
 ---@field public mag number? The joystick's magnitude circle radius with the range `0-128`. If nil, no magnitude circle will be drawn.
 ---@field public x_snap integer? The snap distance to 0 on the X axis. If nil, no snap will be applied.
 ---@field public y_snap integer? The snap distance to 0 on the Y axis. If nil, no snap will be applied.
 ---A joystick which can be interacted with.
 
----@param control Joystick
+---@param control UguiJoystick
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function joystick_get_return_value(control, data)
     data.position = {x = control.position.x, y = control.position.y}
     local rectangle = control._render_rect
@@ -6540,10 +6576,10 @@ local joystick_draw = function(control)
     ugui.standard_styler.draw_joystick(control, visual_state)
 end
 
----Places a Joystick.
----@param control Joystick The control table.
+---Places a UguiJoystick.
+---@param control UguiJoystick The control table.
 ---@param fn fun()? A callback whose placed controls become children of the joystick.
----@return UguiVector2, Meta
+---@return UguiVector2, UguiMeta
 ugui.joystick = function(control, fn)
     ugui.internal.assert(type(control.position) == 'table', 'expected position to be table')
     ugui.internal.assert(type(control.position.x) == 'number', 'expected position.x to be number')
@@ -6570,7 +6606,7 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class ColorPicker : UguiControl
+---@class UguiColorPicker : UguiControl
 ---@field public color UguiRGBAF The current color and initial selection.
 ---@field public shape "square"|"circle"? The picker shape. Defaults to "square".
 ---@field public band_position "right"|"top"|"left"|"bottom"|"none"? Where the hue/value band is placed. Defaults to "right".
@@ -6623,7 +6659,7 @@ local function colorpicker_get_geometry(rectangle, band_position)
     return picker, band
 end
 
----@param control ColorPicker
+---@param control UguiColorPicker
 ---@param point UguiVector2
 ---@return boolean
 local function colorpicker_hittest(control, point)
@@ -6637,9 +6673,9 @@ local function colorpicker_hittest(control, point)
         (band.width > 0 and band.height > 0 and ugui.internal.point_in_rect(point, band))
 end
 
----@param control ColorPicker
+---@param control UguiColorPicker
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function colorpicker_get_return_value(control, data)
     local input_color = control.color
     local hue, saturation, value = ugui.internal.rgbaf_to_hsv(input_color)
@@ -6877,10 +6913,10 @@ local colorpicker_draw = function(control)
     end
 end
 
----Places a ColorPicker.
----@param control ColorPicker The control table.
+---Places a UguiColorPicker.
+---@param control UguiColorPicker The control table.
 ---@param fn fun()? A callback whose placed controls become children of the color picker.
----@return UguiRGBAF, Meta The selected color and its change metadata.
+---@return UguiRGBAF, UguiMeta The selected color and its change metadata.
 ugui.colorpicker = function(control, fn)
     ugui.internal.assert(type(control.color) == 'table', 'expected color to be table')
     ugui.internal.assert(type(control.color.r) == 'number', 'expected color.r to be a number')
@@ -6912,13 +6948,13 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class Trackbar : UguiControl
+---@class UguiTrackbar : UguiControl
 ---@field public value number The current value in the range 0-1.
 ---A trackbar which can have its value adjusted.
 
----@param control Trackbar
+---@param control UguiTrackbar
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function trackbar_get_return_value(control, data)
     data.value = control.value
     local rectangle = control._render_rect
@@ -6948,10 +6984,10 @@ local trackbar_draw = function(control)
     ugui.standard_styler.draw_trackbar(control)
 end
 
----Places a Trackbar.
----@param control Trackbar The control table.
+---Places a UguiTrackbar.
+---@param control UguiTrackbar The control table.
 ---@param fn fun()? A callback whose placed controls become children of the trackbar.
----@return number, Meta # The trackbar's new value.
+---@return number, UguiMeta # The trackbar's new value.
 ugui.trackbar = function(control, fn)
     ugui.internal.assert(type(control.value) == 'number', 'expected position to be number')
     control.draw = control.draw or trackbar_draw
@@ -6970,19 +7006,19 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class MenuItem
----@field public items MenuItem[]? The item's child items. If nil or empty, the item has no child items and is clickable.
+---@class UguiMenuItem
+---@field public items UguiMenuItem[]? The item's child items. If nil or empty, the item has no child items and is clickable.
 ---@field public enabled boolean? Whether the item is enabled. If nil or true, the item is enabled.
 ---@field public checked boolean? Whether the item is checked. If true, the item is checked.
----@field public text RichText The item's text.
----Represents an item inside of a Menu.
+---@field public text UguiRichText The item's text.
+---Represents an item inside of a UguiMenu.
 
----@class MenuResult
----@field public item MenuItem? The item that was clicked, or nil if none was.
+---@class UguiMenuResult
+---@field public item UguiMenuItem? The item that was clicked, or nil if none was.
 ---@field public dismissed boolean Whether the menu was dismissed by clicking outside of it.
 
----@class Menu : UguiControl
----@field public items MenuItem[] The items contained in the menu.
+---@class UguiMenu : UguiControl
+---@field public items UguiMenuItem[] The items contained in the menu.
 ---A menu, which allows the user to choose from a list of items.
 
 local function menu_init(_, data)
@@ -7022,9 +7058,9 @@ local function menu_fit(rectangle, parent_rectangle)
     return rectangle
 end
 
----@param control Menu
+---@param control UguiMenu
 ---@param hovered_path integer[]
----@return {items: MenuItem[], rectangle: UguiRect, depth: integer}[]
+---@return {items: UguiMenuItem[], rectangle: UguiRect, depth: integer}[]
 local function menu_get_visible(control, hovered_path)
     local visible = {}
     local rectangle = ugui.internal.deep_clone(assert(control._render_rect))
@@ -7057,7 +7093,7 @@ local function menu_get_visible(control, hovered_path)
     return visible
 end
 
----@param control Menu
+---@param control UguiMenu
 ---@param point UguiVector2
 ---@return boolean
 local function menu_hittest(control, point)
@@ -7072,9 +7108,9 @@ local function menu_hittest(control, point)
     return false
 end
 
----@param control Menu
+---@param control UguiMenu
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function menu_get_return_value(control, data)
     data.hovered_path = data.hovered_path or {}
     local result = {item = nil, dismissed = false}
@@ -7155,9 +7191,9 @@ local menu_draw = function(control)
     end
 end
 
----Places a Menu.
----@param control Menu The control table.
----@return MenuResult, Meta # The menu result.
+---Places a UguiMenu.
+---@param control UguiMenu The control table.
+---@return UguiMenuResult, UguiMeta # The menu result.
 ugui.menu = function(control)
     ugui.internal.assert(type(control.items) == 'table', 'expected items to be table')
     control.z_index = control.z_index or 1000
@@ -7191,12 +7227,12 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class TabControl : UguiControl
----@field public items RichText[] The tab headers.
+---@class UguiTabControl : UguiControl
+---@field public items UguiRichText[] The tab headers.
 ---@field public selected_index integer The index of the currently selected tab.
 ---A tab control, which allows the user to choose from a list of tabs.
 
----@class TabControlResult
+---@class UguiTabControlResult
 ---@field public selected_index integer The index of the selected tab.
 ---@field public rectangle UguiRect The visual bounds the selected tab can place its contents in.
 
@@ -7208,9 +7244,9 @@ local function initialize_tabcontrol_data(control, data)
     data.selected_index = control.selected_index
 end
 
----@param control TabControl
+---@param control UguiTabControl
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function tabcontrol_get_return_value(control, data)
     data.selected_index = control.selected_index
     return {
@@ -7220,10 +7256,10 @@ local function tabcontrol_get_return_value(control, data)
 end
 
 
----Places a TabControl.
----@param control TabControl The control table.
+---Places a UguiTabControl.
+---@param control UguiTabControl The control table.
 ---@param fn fun()? A callback whose placed controls become children of the selected tab's content panel.
----@return TabControlResult, Meta # The result.
+---@return UguiTabControlResult, UguiMeta # The result.
 ugui.tabcontrol = function(control, fn)
     ugui.internal.assert(type(control.items) == 'table', 'expected items to be table')
     ugui.internal.assert(type(control.selected_index) == 'number', 'expected selected_index to be number')
@@ -7323,7 +7359,7 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class NumberBox : UguiControl
+---@class UguiNumberBox : UguiControl
 ---@field public value integer The value.
 ---@field public places integer The amount of digits the value is padded to.
 ---@field public show_negative boolean? Whether a button for viewing and toggling the value's sign is shown. If nil, false is assumed.
@@ -7335,9 +7371,9 @@ local function initialize_numberbox_data(control, data)
     data.caret_index = 1
 end
 
----@param control NumberBox
+---@param control UguiNumberBox
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function numberbox_get_return_value(control, data)
     local rectangle = control._render_rect
     local prev_value_negative = control.value < 0
@@ -7520,10 +7556,10 @@ local numberbox_draw = function(control)
     end
 end
 
----Places a NumberBox.
----@param control NumberBox The control table.
+---Places a UguiNumberBox.
+---@param control UguiNumberBox The control table.
 ---@param fn fun()? A callback whose placed controls become children of the numberbox.
----@return integer, Meta # The new value.
+---@return integer, UguiMeta # The new value.
 ugui.numberbox = function(control, fn)
     ugui.internal.assert(type(control.value) == 'number', 'expected value to be number')
     ugui.internal.assert(type(control.places) == 'number', 'expected places to be number')
@@ -7579,7 +7615,7 @@ end
 -- SPDX-License-Identifier: GPL-3.0-or-later
 --
 
----@class Spinner : UguiControl
+---@class UguiSpinner : UguiControl
 ---@field public value number The spinner's numerical value.
 ---@field public increment number? The increment applied when the + or - buttons are clicked (negated when - is clicked). If nil, 1 is assumed.
 ---@field public minimum_value number? The minimum value.
@@ -7595,9 +7631,9 @@ local function initialize_spinner_data(control, data)
     data.value = control.value or 0
 end
 
----@param control Spinner
+---@param control UguiSpinner
 ---@param data any
----@return ControlReturnValue
+---@return UguiControlReturnValue
 local function spinner_get_return_value(control, data)
     data.value = control.value or 0
     return {
@@ -7607,10 +7643,10 @@ local function spinner_get_return_value(control, data)
 end
 
 
----Places a Spinner.
----@param control Spinner The control table.
+---Places a UguiSpinner.
+---@param control UguiSpinner The control table.
 ---@param fn fun()? A callback whose placed controls become children of the spinner.
----@return number, Meta # The new value.
+---@return number, UguiMeta # The new value.
 ugui.spinner = function(control, fn)
     ugui.internal.assert(type(control.value) == 'number' or type(control.value) == 'nil',
         'expected value to be number or nil')
@@ -7777,7 +7813,7 @@ end
 ---@alias UguiWindowTitlebarPosition "top"|"left"|"right"|"bottom"
 
 ---@class UguiWindow : UguiControl
----@field public title RichText The window's title.
+---@field public title UguiRichText The window's title.
 ---@field public titlebar_size number? The titlebar height or width. Defaults to 24.
 ---@field public titlebar_position UguiWindowTitlebarPosition? The titlebar's position. Defaults to `top`.
 ---@field public resize_grip_size number? The resize grip's size. Defaults to 8.
@@ -7840,7 +7876,7 @@ end
 ---Places a Window.
 ---@param control UguiWindow The control table.
 ---@param fn fun()? A callback whose placed controls become children of the window's content slot.
----@return UguiWindowResult, Meta # The window result.
+---@return UguiWindowResult, UguiMeta # The window result.
 ugui.window = function(control, fn)
     ugui.internal.assert(type(control.title) == 'string', 'expected title to be string')
     ugui.internal.assert(type(control.titlebar_size) == 'number' or control.titlebar_size == nil,
@@ -8195,7 +8231,7 @@ local function _nineslice_draw_image(path, destination, source, center, sampling
     )
 end
 
----@alias UguiNinesliceMetadataMap table<VisualState, { source: UguiRect, center: UguiRect }>
+---@alias UguiNinesliceMetadataMap table<UguiVisualState, { source: UguiRect, center: UguiRect }>
 
 ---@class UguiNinesliceMetadata
 ---@field states UguiNinesliceMetadataMap Per-visual state nineslice metadata.

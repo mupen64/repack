@@ -85,9 +85,14 @@ local processors = {
     semantic_workflow.readback,
 }
 
-Notifications = dofile(Redux.VIEWS_PATH .. 'Notifications.lua')
 
-ugui_environment = {}
+---@type UguiEnvironment
+ugui_environment = {
+    mouse_position = { x = 0, y = 0 },
+    key_events = {},
+    mouse_events = {},
+}
+---@type MouseEventArgs[]
 local stored_mouse_events = {}
 
 -- Flag keeping track of whether atinput has fired for one time
@@ -278,15 +283,12 @@ local function atdrawd2d()
 
     VarWatch_update()
 
-    local focused = emu.ismainwindowinforeground()
-
     ugui_environment = {
         mouse_position = {
             x = keys.xmouse,
             y = keys.ymouse,
         },
         mouse_events = stored_mouse_events,
-        is_primary_down = keys.leftclick and focused,
         key_events = key_events,
         shift = keys.shift,
         window_size = {
@@ -302,7 +304,6 @@ local function atdrawd2d()
     GhostTab_draw_ghost_overlay(
         views[Settings.tab_index].name() == Locales.msg.SEMANTIC_WORKFLOW_TAB_NAME and 6 or 0
     )
-    Notifications.draw()
 
     BreitbandGraphics.fill_rectangle({
         x = Drawing.initial_size.width,

@@ -297,7 +297,7 @@ return {
             section_label(UID.ColorLabel, grid_rect(0, 9.7, 1.3, 1), Locales.msg.GHOST_COLOR)
 
             local color = Ghosts.get_color(selected_ghost)
-            local color_text_is_focused = ugui.internal.keyboard_captured_control == UID.Color
+            local color_text_is_focused = ugui.internal.keyboard_captured_control == ugui.internal.resolve_uid(UID.Color)
             if color_text == nil or not color_text_is_focused or color_text_ghost ~= selected_ghost then
                 color_text = Colors.rgb_to_str(color)
                 color_text_ghost = selected_ghost
