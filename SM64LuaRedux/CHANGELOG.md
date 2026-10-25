@@ -1,10 +1,14 @@
 # Unreleased
 
-TBD
+This is a development version.
 
 ## ✨ Features
 
 - Changed notification system to use Mupen's native toasts.
+
+## 🐞 Bugfixes
+
+- Fixed increment angle action not wrapping the angle correctly
 
 # 7.0.0
 
