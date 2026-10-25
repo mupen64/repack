@@ -245,8 +245,8 @@ actions[#actions + 1] = wrap_params({
 
         Settings.tas.goal_angle = Settings.tas.goal_angle + 16
 
-        if Settings.tas.goal_angle < 0 then
-            Settings.tas.goal_angle = 65535
+        if Settings.tas.goal_angle > 65535 then
+            Settings.tas.goal_angle = 0
         else
             if Settings.tas.goal_angle % 16 ~= 0 then
                 Settings.tas.goal_angle = math.floor((Settings.tas.goal_angle + 8) / 16) * 16
