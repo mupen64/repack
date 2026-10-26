@@ -100,9 +100,11 @@ local default_color_counter = 1
 local HACK_FILE_BASE <const> = 0x80400000
 local MIN_BASE_OFFSET <const> = 0x8040 -- below this is the game's own memory
 local MAX_BASE_OFFSET <const> = 0x806C -- the 15 animation buffers end at base + 0x13C000
+
+local GHOST_LOOP_CODE_OFFSET = 0x8000 -- offset of the code responsible for controlling the ghosts within the hack's region
 local BASE_LUIS <const> = {0x44, 0x78, 0x190, 0x270} -- offsets to write "LUI Ghosts.base_offset" to
-local BASE_PLUS_1_LUI <const> = 0xF8 -- offset to write "LUI Ghosts.base_offset + 1" to
-local ANIMATION_BUFFER_LUI <const> = 0x50 -- offset to write "LUI Ghosts.base_offset + 0x10" to
+local BASE_PLUS_1_LUI <const> = 0xF8 -- offset to write "LUI Ghosts.base_offset + 1" to (relative to GHOST_LOOP_CODE_OFFSET)
+local ANIMATION_BUFFER_LUI <const> = 0x50 -- offset to write "LUI Ghosts.base_offset + 0x10" to (relative to GHOST_LOOP_CODE_OFFSET)
 local HAT_COLOR_LIGHTS_OFFSET <const> = 0x8300
 
 local pending_base_offset = nil
@@ -116,7 +118,7 @@ end
 
 -- jal ghost_loop, written into area_update_objects
 local function hook_instruction()
-    return 0x0C000000 | ((region(0x8000) & 0x03FFFFFF) >> 2)
+    return 0x0C000000 | ((region(GHOST_LOOP_CODE_OFFSET) & 0x03FFFFFF) >> 2)
 end
 
 local function writebytes32(f, x)
@@ -964,10 +966,10 @@ function Ghosts.apply_hack()
 
     -- point the moved code at its new region
     for _, offset in ipairs(BASE_LUIS) do
-        memory.writeword(region(offset) + 2, Ghosts.base_offset)
+        memory.writeword(region(offset + GHOST_LOOP_CODE_OFFSET) + 2, Ghosts.base_offset)
     end
-    memory.writeword(region(BASE_PLUS_1_LUI) + 2, Ghosts.base_offset + 1)
-    memory.writeword(region(ANIMATION_BUFFER_LUI) + 2, Ghosts.base_offset + 0x10)
+    memory.writeword(region(BASE_PLUS_1_LUI + GHOST_LOOP_CODE_OFFSET) + 2, Ghosts.base_offset + 1)
+    memory.writeword(region(ANIMATION_BUFFER_LUI + GHOST_LOOP_CODE_OFFSET) + 2, Ghosts.base_offset + 0x10)
 
     -- clear some memory to prevent nonsensical data causing a game crash
     -- on the first ghost loop iteration
