@@ -6,6 +6,10 @@ This is a development version.
 
 - Changed notification system to use Mupen's native toasts.
 
+## ⚡ Performance
+
+- Improved memory reading performance.
+
 ## 🐞 Bugfixes
 
 - Fixed increment angle action not wrapping the angle correctly
