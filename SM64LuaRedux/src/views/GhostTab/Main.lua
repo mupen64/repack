@@ -6,7 +6,7 @@
 
 local UID = UIDProvider.allocate_once('GhostTab', function(enum_next)
     return {
-        TabControl = enum_next(UIDProvider.unknown),
+        TabControl = enum_next(),
         Overlay = enum_next(),
         OverlayColor = enum_next(),
         TabPanels = enum_next(3),

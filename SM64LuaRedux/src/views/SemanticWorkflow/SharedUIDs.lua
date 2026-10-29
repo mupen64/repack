@@ -1,8 +1,8 @@
 return UIDProvider.allocate_once("SemanticWorkflow", function(enum_next)
     return {
         VarWatch = enum_next(),
-        SelectTab = enum_next(UIDProvider.unknown),
-        SelectTabProjectLoaded = enum_next(UIDProvider.unknown),
+        SelectTab = enum_next(),
+        SelectTabProjectLoaded = enum_next(),
         TabPanels = enum_next(3),
         ToggleHelp = enum_next(),
         HelpNext = enum_next(),

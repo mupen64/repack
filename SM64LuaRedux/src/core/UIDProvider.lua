@@ -21,7 +21,6 @@ local function allocate_once(key, allocator)
     return allocated[key]
 end
 
-
 UIDProvider = {
     allocate_once = allocate_once,
     -- To be used as a placeholder for unknown UID allocations. Big enough to fit most things.
