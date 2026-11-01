@@ -14,6 +14,7 @@ WorldVisualizer = {
 local camera_depth = 0
 local camera_yaw = 0
 local camera_pitch = 0
+local viewport_size = { x = 0, y = 0 }
 
 gObjlist = 0x8033D488
 objsize = 0x260
@@ -60,8 +61,8 @@ local function project(vec3)
     p.y = -p.y * camera_depth / p.z
 
     --move to center of screen
-    p.x = p.x + Drawing.initial_size.width / 2
-    p.y = p.y + Drawing.initial_size.height / 2
+    p.x = p.x + viewport_size.x / 2
+    p.y = p.y + viewport_size.y / 2
     p.z = p.z
 
     return p
@@ -133,16 +134,26 @@ local function draw_object(o, color, thickness)
     BreitbandGraphics.draw_rectangle(rect, color, thickness)
 end
 
-WorldVisualizer.draw = function()
+local function highlighted_object()
     local highlighted = WorldVisualizer.highlighted_object
     if highlighted and (highlighted < 0x80000000 or highlighted >= 0x80800000) then
-        highlighted = nil
+        return nil
     end
-    if not Settings.worldviz_enabled and not highlighted then
+    return highlighted
+end
+
+WorldVisualizer.is_enabled = function()
+    return Settings.worldviz_enabled or highlighted_object() ~= nil
+end
+
+WorldVisualizer.draw = function()
+    if not WorldVisualizer.is_enabled() then
         return
     end
+    local highlighted = highlighted_object()
 
-    camera_depth = (Drawing.initial_size.height - 29) / (2 * math.tan(math.rad(Memory.current.camera_fov / 2)))
+    viewport_size = emu.main_window():size()
+    camera_depth = viewport_size.y / (2 * math.tan(math.rad(Memory.current.camera_fov / 2)))
     camera_yaw = Memory.current.camera_yaw / 182.04
     camera_pitch = Memory.current.camera_pitch / 182.04
 

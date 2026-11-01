@@ -60,7 +60,7 @@ apply_math_shim()
 
 Memory.initialize()
 Joypad.update()
-Drawing.size_up()
+Drawing.initialize()
 Presets.load()
 Presets.apply(Presets.persistent.current_index)
 Actions.register_all()
@@ -98,7 +98,7 @@ local stored_mouse_events = {}
 -- Flag keeping track of whether atinput has fired for one time
 local first_input = true
 
-local keys = input.get()
+local keys = {}
 local defer_draw_queue = {}
 local defer_before_navbar_queue = {}
 local key_events = {}
@@ -265,17 +265,49 @@ local previous_tab_index = Settings.tab_index
 local view_transition_x = -5
 local view_out_transition = ugui.transition.fly({ x = 5, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
 
-local function atdrawd2d()
+local main_paint_registered = false
+local main_paint_cleared = false
+local function at_main_paint()
+    painter.current():clear({ r = 0, g = 0, b = 0, a = 0 })
+    if not Settings.mini_visualizer and not WorldVisualizer.is_enabled() then
+        main_paint_cleared = true
+        return
+    end
+
+    main_paint_cleared = false
+    painter.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
+    WorldVisualizer.draw()
+    MiniVisualizer.draw()
+end
+
+local function update_main_paint_registration()
+    local enabled = Settings.mini_visualizer or WorldVisualizer.is_enabled()
+    if not enabled then
+        if main_paint_registered and main_paint_cleared then
+            emu.main_window():atpaint(at_main_paint, true)
+            main_paint_registered = false
+            main_paint_cleared = false
+        end
+        return
+    end
+
+    main_paint_cleared = false
+    if main_paint_registered then
+        return
+    end
+
+    emu.main_window():atpaint(at_main_paint)
+    main_paint_registered = true
+end
+
+
+local function at_paint()
+    Drawing.resize_to_scale()
     ugui.PREFERS_REDUCED_MOTION = Settings.animations == 'disabled'
     view_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
     Styles.refresh_system_style()
-    d2d.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
+    painter.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
 
-    if d2d and d2d.clear then
-        d2d.clear(0, 0, 0, 0)
-    end
-
-    keys = input.get()
     G_KEYS = ugui.internal.deep_clone(keys)
 
     -- HACK: We turn off hotkeys while a control is capturing inputs
@@ -284,31 +316,22 @@ local function atdrawd2d()
     VarWatch_update()
 
     ugui_environment = {
-        mouse_position = {
-            x = keys.xmouse,
-            y = keys.ymouse,
-        },
+        mouse_position = Drawing.window:mouse_position(),
         mouse_events = stored_mouse_events,
         key_events = key_events,
         shift = keys.shift,
         window_size = {
             x = Drawing.size.width,
-            y = Drawing.size.height - 23,
+            y = Drawing.size.height,
         },
         scale = Drawing.scale,
     }
     ugui.begin_frame(ugui_environment)
 
-    WorldVisualizer.draw()
-    MiniVisualizer.draw()
-    GhostTab_draw_ghost_overlay(
-        views[Settings.tab_index].name() == Locales.msg.SEMANTIC_WORKFLOW_TAB_NAME and 6 or 0
-    )
-
     BreitbandGraphics.fill_rectangle({
-        x = Drawing.initial_size.width,
+        x = 0,
         y = 0,
-        width = Drawing.size.width - Drawing.initial_size.width,
+        width = Drawing.size.width,
         height = Drawing.size.height,
     }, Styles.theme().background_color)
 
@@ -319,14 +342,16 @@ local function atdrawd2d()
     if Settings.tab_index ~= previous_tab_index then
         local forward_distance = (Settings.tab_index - previous_tab_index) % #views
         view_transition_x = forward_distance <= #views / 2 and 10 or -10
-        view_out_transition.tick = ugui.transition.fly({ x = -view_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+        view_out_transition.tick = ugui.transition.fly({ x = -view_transition_x, y = 0, duration = Settings.animations ==
+        'fast' and 0.1 or nil }).tick
         previous_tab_index = Settings.tab_index
     end
 
     ugui.panel({
         uid = UID.ViewPanels + Settings.tab_index - 1,
         rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
-        in_transition = ugui.transition.fly({ x = view_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+        in_transition = ugui.transition.fly({ x = view_transition_x, y = 0, duration = Settings.animations == 'fast' and
+        0.1 or nil }),
         out_transition = view_out_transition,
     }, function()
         views[Settings.tab_index].draw()
@@ -342,6 +367,7 @@ local function atdrawd2d()
     key_events = {}
 
     execute_defer_draw_queue()
+    update_main_paint_registration()
 end
 
 local function at_loadstate()
@@ -354,18 +380,28 @@ end
 emu.atloadstate(at_loadstate)
 emu.atinput(at_input)
 emu.atvi(at_vi)
-emu.atdrawd2d(atdrawd2d)
+Drawing.window:atpaint(at_paint)
+
+update_main_paint_registration()
 emu.atstop(function()
     Presets.save()
-    Drawing.size_down()
     BreitbandGraphics.free()
     ugui.free()
 end)
 
-emu.atmouse(function(args)
+local function update_modifiers(args)
+    keys.control = args.ctrl
+    keys.alt = args.alt
+    keys.shift = args.shift
+    keys.meta = args.meta
+end
+
+Drawing.window:atmouse(function(args)
+    update_modifiers(args)
     stored_mouse_events[#stored_mouse_events + 1] = args
 end)
 
-emu.atkey(function(args)
+Drawing.window:atkey(function(args)
+    update_modifiers(args)
     key_events[#key_events + 1] = args
 end)

@@ -112,8 +112,7 @@ return {
         draw_button(Joypad.input.Cdown, '#FFFF00', '6', 'ellipse', x, y, 135, 68, 21, 21, 'Marlett')
 
         local rc2 = grid_rect(0.1, 7, 0, 0)
-        local available_width = (Drawing.size.width - Drawing.initial_size.width) / Drawing.scale -
-            (rc2.x - Drawing.initial_size.width / Drawing.scale) * 2
+        local available_width = Drawing.size.width / Drawing.scale - rc2.x * 2
 
         y = rc2.y
 
