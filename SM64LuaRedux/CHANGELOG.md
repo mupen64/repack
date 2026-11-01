@@ -5,6 +5,7 @@ This is a development version.
 ## ✨ Features
 
 - Changed notification system to use Mupen's native toasts.
+- Changed the script to be contained in a native Mupen window.
 
 ## ⚡ Performance
 
