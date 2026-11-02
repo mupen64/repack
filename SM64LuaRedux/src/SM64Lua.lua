@@ -25,6 +25,9 @@ BreitbandGraphics = dofile(Redux.VENDOR_PATH .. 'breitbandgraphics-amalgamated.l
 ---@module 'ugui-amalgamated'
 ugui = dofile(Redux.VENDOR_PATH .. 'ugui-amalgamated.lua')
 
+---@module 'ugui-amalgamated'
+MainUgui = dofile(Redux.VENDOR_PATH .. 'ugui-amalgamated.lua')
+
 ---@module 'linq'
 lualinq = dofile(Redux.VENDOR_PATH .. 'linq.lua')
 
@@ -74,6 +77,10 @@ local views = {
     dofile(Redux.VIEWS_PATH .. 'Visualizer.lua'),
     dofile(Redux.VIEWS_PATH .. 'GhostTab/Main.lua'),
 }
+
+function cycle_tab(offset)
+    Settings.tab_index = (Settings.tab_index - 1 + offset) % #views + 1
+end
 
 local semantic_workflow = dofile(Redux.PROCESSORS_PATH .. 'SemanticWorkflow.lua')
 local processors = {
@@ -267,17 +274,35 @@ local view_out_transition = ugui.transition.fly({ x = 5, y = 0, duration = Setti
 
 local main_paint_registered = false
 local main_paint_cleared = false
+local main_mouse_events = {}
+local main_key_events = {}
+local main_shift = false
 local function at_main_paint()
     painter.current():clear({ r = 0, g = 0, b = 0, a = 0 })
     if not Settings.mini_visualizer and not WorldVisualizer.is_enabled() then
+        main_mouse_events = {}
+        main_key_events = {}
         main_paint_cleared = true
         return
     end
 
     main_paint_cleared = false
     painter.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
+    MainUgui.PREFERS_REDUCED_MOTION = Settings.animations == 'disabled'
+    local size = emu.main_window():size()
+    MainUgui.begin_frame({
+        mouse_position = emu.main_window():mouse_position(),
+        mouse_events = main_mouse_events,
+        key_events = main_key_events,
+        shift = main_shift,
+        window_size = size,
+        scale = math.max(0.01, MoreMaths.round(size.y / 600, 2)),
+    })
     WorldVisualizer.draw()
     MiniVisualizer.draw()
+    MainUgui.end_frame()
+    main_mouse_events = {}
+    main_key_events = {}
 end
 
 local function update_main_paint_registration()
@@ -387,6 +412,7 @@ emu.atstop(function()
     Presets.save()
     BreitbandGraphics.free()
     ugui.free()
+    MainUgui.free()
 end)
 
 local function update_modifiers(args)
@@ -404,4 +430,18 @@ end)
 Drawing.window:atkey(function(args)
     update_modifiers(args)
     key_events[#key_events + 1] = args
+end)
+
+emu.main_window():atmouse(function(args)
+    main_shift = args.shift
+    if Settings.mini_visualizer then
+        main_mouse_events[#main_mouse_events + 1] = args
+    end
+end)
+
+emu.main_window():atkey(function(args)
+    main_shift = args.shift
+    if Settings.mini_visualizer then
+        main_key_events[#main_key_events + 1] = args
+    end
 end)

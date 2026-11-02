@@ -13,7 +13,7 @@
 --
 
 local ugui = {
-    _VERSION = '7.0.0',
+    _VERSION = 'next',
     _URL = 'https://codeberg.org/mupen64/ugui',
     _DESCRIPTION = 'Flexible immediate-mode GUI library for Mupen Lua',
     _LICENSE = 'GPL-3',
@@ -2372,6 +2372,7 @@ end
 ---@field public duration number The duration of the transition in seconds. Interrupted transitions restart with the new transition's full duration and blend from the displayed opacity and translation.
 ---@field public delay number The delay before the transition starts in seconds.
 ---@field public easing UguiEasingFunc The easing function, applied exactly once by tick. Callers must not pre-ease progress.
+---@field public scoped boolean? Whether the transition plays only when the control itself enters/leaves the scene, not when a parent does.
 ---@field public tick fun(control: UguiControl, t: number): number? Receives raw normalized progress: 0 uses the transition parameter values, 1 uses the control's current values. May return eased progress so interruption blending follows the same easing. Otherwise blending uses raw progress.
 
 ugui.transition = {}
@@ -2389,6 +2390,7 @@ local function transition_params(params)
 end
 
 ---@class UguiFadeParams
+---@field public scoped boolean? Whether the transition plays only when the control itself enters/leaves the scene, not when a parent does.
 ---@field public duration number? The duration of the transition in seconds. Defaults to `0.25`.
 ---@field public delay number? The delay before the transition starts in seconds. Defaults to `0`.
 ---@field public easing UguiEasingFunc? The easing function for the transition. Defaults to `ugui.easing.in_out_cubic`.
@@ -2403,6 +2405,7 @@ function ugui.transition.fade(params)
         duration = duration,
         delay = delay,
         easing = easing,
+        scoped = default(params.scoped, true),
         tick = function(control, t)
             local progress = easing(t)
             local to_opacity = default(control.opacity, 1)
@@ -2413,6 +2416,7 @@ function ugui.transition.fade(params)
 end
 
 ---@class UguiFlyParams
+---@field public scoped boolean? Whether the transition plays only when the control itself enters/leaves the scene, not when a parent does.
 ---@field public duration number? The duration of the transition in seconds. Defaults to `0.25`.
 ---@field public delay number? The delay before the transition starts in seconds. Defaults to `0`.
 ---@field public easing UguiEasingFunc? The easing function for the transition. Defaults to `ugui.easing.in_out_cubic`.
@@ -2431,6 +2435,7 @@ function ugui.transition.fly(params)
         duration = duration,
         delay = delay,
         easing = easing,
+        scoped = default(params.scoped, true),
         tick = function(control, t)
             local progress = easing(t)
             local to_opacity = default(control.opacity, 1)
@@ -2446,6 +2451,7 @@ end
 
 local transition_states = {}
 local previous_transition_scene = {}
+local previous_scene_uids = {}
 
 local function clear_transition_values(control)
     control._t_opacity, control._t_tx, control._t_ty = nil, nil, nil
@@ -2526,6 +2532,16 @@ ugui.internal.prepare_transition = function(control)
         transition_states[uid] = nil
         return
     end
+    if intro and intro.scoped then
+        local parent = ugui.internal.current_parent
+        while parent and parent ~= ugui.internal.scene_root do
+            if not previous_scene_uids[parent.control._uid] then
+                intro = nil
+                break
+            end
+            parent = parent.parent
+        end
+    end
     local now = ugui.internal.transition_time
     local state = transition_states[uid]
     if not state then
@@ -2535,10 +2551,10 @@ ugui.internal.prepare_transition = function(control)
     elseif state.direction == -1 then
         advance_transition(state, now)
         start_transition(state, intro, 1, now)
-        if not intro then state.progress = 1 end
     else
         state.transition = intro
     end
+    if not intro then state.progress = 1 end
     state.seen = ugui.internal.frame_index
     advance_transition(state, now)
     if intro then tick_transition(state, control) end
@@ -2546,7 +2562,7 @@ end
 
 ugui.internal.finish_transitions = function()
     if ugui.PREFERS_REDUCED_MOTION then
-        transition_states, previous_transition_scene = {}, {}
+        transition_states, previous_transition_scene, previous_scene_uids = {}, {}, {}
         for _, node in pairs(ugui.internal.scene_nodes_by_uid) do
             remove_transitions(node.control)
         end
@@ -2555,17 +2571,22 @@ ugui.internal.finish_transitions = function()
     local now = ugui.internal.transition_time
     local frame = ugui.internal.frame_index
     local nodes = ugui.internal.scene_nodes_by_uid
-    local function restore(previous, parent, inherited_exit)
+    local function restore(previous, parent, inherited_exit, ancestor_leaving)
         local control = previous.control
         local uid = control._uid
         local current = nodes[uid]
         if current then
             for _, child in ipairs(previous.children) do
-                restore(child, current, false)
+                restore(child, current, false, false)
             end
             return
         end
         local outro = control.out_transition or control.transition
+        if outro and outro.scoped and ancestor_leaving then
+            outro = nil
+            transition_states[uid] = nil
+            clear_transition_values(control)
+        end
         local shell = not outro and not inherited_exit
         local state = transition_states[uid]
         if outro then
@@ -2593,7 +2614,7 @@ ugui.internal.finish_transitions = function()
         local old_children = previous.children
         previous.children = {}
         for _, child in ipairs(old_children) do
-            restore(child, previous, not shell)
+            restore(child, previous, not shell, true)
         end
         if shell and #previous.children == 0 then
             nodes[uid] = nil
@@ -2608,7 +2629,7 @@ ugui.internal.finish_transitions = function()
         ugui.internal.update_render_rect(control)
     end
     for _, previous in ipairs(previous_transition_scene) do
-        restore(previous, ugui.internal.scene_root, false)
+        restore(previous, ugui.internal.scene_root, false, false)
     end
     for uid, state in pairs(transition_states) do
         if state.seen ~= frame and state.kept ~= frame then
@@ -2624,12 +2645,14 @@ local function shallow_copy(value)
 end
 
 ugui.internal.save_transition_scene = function()
+    previous_scene_uids = {}
     if ugui.PREFERS_REDUCED_MOTION then
         previous_transition_scene = {}
         return
     end
     local function snapshot(node, inherited)
         local control = node.control
+        if not node.exiting then previous_scene_uids[control._uid] = true end
         local animated = inherited or control.in_transition or control.out_transition or control.transition
         local children = {}
         for _, child in ipairs(node.children) do

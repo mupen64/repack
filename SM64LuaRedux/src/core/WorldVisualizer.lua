@@ -11,6 +11,8 @@ WorldVisualizer = {
 
 -- original by madghostek, adapted to redux model
 
+local ugui = MainUgui
+
 local camera_depth = 0
 local camera_yaw = 0
 local camera_pitch = 0

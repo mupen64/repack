@@ -6,6 +6,7 @@ This is a development version.
 
 - Changed notification system to use Mupen's native toasts.
 - Changed the script to be contained in a native Mupen window.
+- Added actions for tab cycling.
 
 ## ⚡ Performance
 

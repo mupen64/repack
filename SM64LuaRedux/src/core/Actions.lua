@@ -51,6 +51,9 @@ ACTION_SETTINGS_AUTODETECT_NOW = ACTION_SETTINGS .. ' > Detect Address Now'
 ACTION_SETTINGS_TOGGLE_AUTODETECT = ACTION_SETTINGS .. ' > Detect Address On Start ---'
 ACTION_SETTINGS_SET_ANGLE_FORMAT = ACTION_SETTINGS .. ' > Set Angle Format...'
 ACTION_SETTINGS_SET_DECIMAL_POINTS = ACTION_SETTINGS .. ' > Set Decimal Points...'
+ACTION_TAB = ROOT .. 'Tab > '
+ACTION_SET_TAB_DOWN = ACTION_TAB .. 'Select Previous'
+ACTION_SET_TAB_UP = ACTION_TAB .. 'Select Next'
 ACTION_TOGGLE_NAVBAR = ROOT .. 'Navigation Bar'
 ACTION_TOGGLE_DEBUG_MODE = ROOT .. 'Debug Mode'
 
@@ -701,6 +704,20 @@ actions[#actions + 1] = wrap_params({
     },
     on_press = function(params)
         Settings.format_decimal_points = math.max(0, tonumber(params.points))
+    end,
+})
+
+actions[#actions + 1] = wrap_params({
+    path = ACTION_SET_TAB_DOWN,
+    on_press = function()
+        cycle_tab(-1)
+    end,
+})
+
+actions[#actions + 1] = wrap_params({
+    path = ACTION_SET_TAB_UP,
+    on_press = function()
+        cycle_tab(1)
     end,
 })
 
