@@ -53,8 +53,8 @@ local select_object_by_name = false
 local object_list = { objects = {}, items = {} }
 
 local function shorten_path(text)
-    local first = text:find('\\', 1, true)
-    local second_last = text:find('\\[^\\]*\\[^\\]*$')
+    local first = text:find('[/\\]')
+    local second_last = text:find('[/\\][^/\\]*[/\\][^/\\]*$')
     if first and second_last and first < second_last then
         return text:sub(1, first) .. '...' .. text:sub(second_last)
     end

@@ -11,13 +11,14 @@ Redux = {
     _LICENSE = 'GPL-3',
 }
 
-Redux.FOLDER = debug.getinfo(1).source:sub(2):match('(.*\\)')
-Redux.STYLES_PATH = Redux.FOLDER .. 'res\\styles\\'
-Redux.LOCALES_PATH = Redux.FOLDER .. 'res\\lang\\'
-Redux.VIEWS_PATH = Redux.FOLDER .. 'views\\'
-Redux.CORE_PATH = Redux.FOLDER .. 'core\\'
-Redux.VENDOR_PATH = Redux.FOLDER .. '..\\vendor\\'
-Redux.PROCESSORS_PATH = Redux.FOLDER .. 'processors\\'
+Redux.FOLDER = debug.getinfo(1).source:sub(2):match('(.*[/\\])')
+Redux.SEP = Redux.FOLDER:sub(-1)
+Redux.STYLES_PATH = Redux.FOLDER .. 'res' .. Redux.SEP .. 'styles' .. Redux.SEP
+Redux.LOCALES_PATH = Redux.FOLDER .. 'res' .. Redux.SEP .. 'lang' .. Redux.SEP
+Redux.VIEWS_PATH = Redux.FOLDER .. 'views' .. Redux.SEP
+Redux.CORE_PATH = Redux.FOLDER .. 'core' .. Redux.SEP
+Redux.VENDOR_PATH = Redux.FOLDER .. '..' .. Redux.SEP .. 'vendor' .. Redux.SEP
+Redux.PROCESSORS_PATH = Redux.FOLDER .. 'processors' .. Redux.SEP
 
 ---@module 'breitbandgraphics-amalgamated'
 BreitbandGraphics = dofile(Redux.VENDOR_PATH .. 'breitbandgraphics-amalgamated.lua')
