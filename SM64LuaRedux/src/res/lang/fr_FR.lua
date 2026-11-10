@@ -170,7 +170,6 @@ Cette action est irréversible.
     SETTINGS_VISUALS_ANIMATIONS = 'Animations',
     SETTINGS_VISUALS_ANIMATIONS_SYSTEM = 'Système',
     SETTINGS_VISUALS_ANIMATIONS_ENABLED = 'Activées',
-    SETTINGS_VISUALS_ANIMATIONS_FAST = 'Rapides',
     SETTINGS_VISUALS_ANIMATIONS_DISABLED = 'Désactivées',
     SETTINGS_VISUALS_FF_FPS = 'FPS en avance rapide',
     SETTINGS_VISUALS_FF_FPS_TOOLTIP = 'Les FPS lors de l\'avance rapide. Diminuer pour améliorer les performances.',

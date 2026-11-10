@@ -528,7 +528,7 @@ actions[#actions + 1] = wrap_params({
     end,
 })
 
-local animation_options = { 'system', 'enabled', 'fast', 'disabled' }
+local animation_options = { 'system', 'enabled', 'disabled' }
 
 actions[#actions + 1] = wrap_params({
     path = ACTION_SETTINGS_SET_ANIMATIONS,

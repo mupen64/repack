@@ -6,8 +6,6 @@
 
 Drawing = {
     initial_size = nil,
-    ---@type Window
-    window = nil,
     size = nil,
     scale = 1,
     offset_stack = {},
@@ -15,40 +13,19 @@ Drawing = {
 
 
 
-function Drawing.initialize()
+function Drawing.size_up()
     Drawing.initial_size = wgui.info()
-    Drawing.scale = Drawing.initial_size.height / 600
+    Drawing.scale = (Drawing.initial_size.height - 23) / 600
     Drawing.scale = MoreMaths.round(Drawing.scale, 2)
 
-    Drawing.window = emu.create_window({
-        id = 'sm64luaredux',
-        size = { x = math.floor(Settings.grid_size * 8 * Drawing.scale), y = 1 },
-        anchor = 'right_full',
-        closable = false,
-    })
-    Drawing.resize_to_scale()
+    local extra_space = (Settings.grid_size * 8) * Drawing.scale
+    wgui.resize(math.floor(Drawing.initial_size.width + extra_space), Drawing.initial_size.height)
+    Drawing.size = wgui.info()
     print('Scale factor ' .. Drawing.scale)
 end
 
-function Drawing.update_size()
-    local size = Drawing.window:size()
-    if Drawing.size and Drawing.size.width == size.x and Drawing.size.height == size.y then
-        return
-    end
-
-    Drawing.size = { width = size.x, height = size.y }
-    Drawing.scale = math.max(0.01, MoreMaths.round(size.y / 600, 2))
-end
-
-function Drawing.resize_to_scale()
-    Drawing.update_size()
-    local width = math.max(1, math.min(32767, math.floor(Settings.grid_size * 8 * Drawing.scale)))
-    if Drawing.size.width == width then
-        return
-    end
-
-    Drawing.window:resize(width, Drawing.size.height)
-    Drawing.update_size()
+function Drawing.size_down()
+    wgui.resize(wgui.info().width - (wgui.info().width - Drawing.initial_size.width), wgui.info().height)
 end
 
 local function adjust_rect(rect)
@@ -77,8 +54,10 @@ function grid(x, y, x_span, y_span, abs, gap)
         y_span = 1
     end
 
+    local baseline_x = abs and 0 or Drawing.initial_size.width / Drawing.scale
+
     local rect = {
-        (Settings.grid_size * x) + gap,
+        baseline_x + (Settings.grid_size * x) + gap,
         (Settings.grid_size * y) + gap,
         (Settings.grid_size * x_span) - gap * 2,
         (Settings.grid_size * y_span) - gap * 2,

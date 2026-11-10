@@ -176,7 +176,7 @@ return {
                 text = Locales.msg.ATAN_STRAIN_REV,
                 tooltip = Locales.msg.TAS_ATAN_STRAIN_REV_TOOLTIP,
                 is_checked = Settings.tas.reverse_arc,
-                transition = ugui.transition.fly({ x = -5, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
+                transition = ugui.transition.fly({ x = -5, y = 0, duration = 0.1 })
             })
         end
 
@@ -184,7 +184,7 @@ return {
             ugui.panel({
                 uid = UID.AtanPanel,
                 rectangle = grid_rect(0, 3, 8, 1, 0),
-                transition = ugui.transition.fly({ y = -5, duration = Settings.animations == 'fast' and 0.1 or nil })
+                transition = ugui.transition.fly({ y = -5, duration = 0.1 })
             }, function()
                 local function atan_field(index, text, tooltip_key, up_callback, down_callback)
                     local width = 1.6
