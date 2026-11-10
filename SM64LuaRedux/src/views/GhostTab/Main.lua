@@ -24,7 +24,7 @@ local tabs = {
 
 local previous_tab_index = Settings.ghost_tab_index or 1
 local tab_transition_x = 10
-local tab_out_transition = ugui.transition.fly({ x = -10, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
+local tab_out_transition = ugui.transition.fly({ x = -10, y = 0, duration = 0.1 })
 
 ---Draws the selected playback ghost's data over the game.
 ---Called every frame from SM64Lua.lua so it stays up outside the Ghost tab.
@@ -85,15 +85,15 @@ return {
         Settings.ghost_tab_index = data.selected_index
         if Settings.ghost_tab_index ~= previous_tab_index then
             tab_transition_x = Settings.ghost_tab_index > previous_tab_index and 10 or -10
-            tab_out_transition.tick = ugui.transition.fly({ x = -tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+            tab_out_transition.tick = ugui.transition.fly({ x = -tab_transition_x, y = 0, duration = 0.1 }).tick
             previous_tab_index = Settings.ghost_tab_index
         end
-        tab_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+        tab_out_transition.duration = 0.1
 
         ugui.panel({
             uid = UID.TabPanels + Settings.ghost_tab_index - 1,
             rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
-            in_transition = ugui.transition.fly({ x = tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+            in_transition = ugui.transition.fly({ x = tab_transition_x, y = 0, duration = 0.1 }),
             out_transition = tab_out_transition,
         }, function()
             tabs[Settings.ghost_tab_index].draw()

@@ -26,9 +26,6 @@ BreitbandGraphics = dofile(Redux.VENDOR_PATH .. 'breitbandgraphics-amalgamated.l
 ---@module 'ugui-amalgamated'
 ugui = dofile(Redux.VENDOR_PATH .. 'ugui-amalgamated.lua')
 
----@module 'ugui-amalgamated'
-MainUgui = dofile(Redux.VENDOR_PATH .. 'ugui-amalgamated.lua')
-
 ---@module 'linq'
 lualinq = dofile(Redux.VENDOR_PATH .. 'linq.lua')
 
@@ -64,7 +61,7 @@ apply_math_shim()
 
 Memory.initialize()
 Joypad.update()
-Drawing.initialize()
+Drawing.size_up()
 Presets.load()
 Presets.apply(Presets.persistent.current_index)
 Actions.register_all()
@@ -106,7 +103,7 @@ local stored_mouse_events = {}
 -- Flag keeping track of whether atinput has fired for one time
 local first_input = true
 
-local keys = {}
+local keys = input.get()
 local defer_draw_queue = {}
 local defer_before_navbar_queue = {}
 local key_events = {}
@@ -271,69 +268,20 @@ end
 
 local previous_tab_index = Settings.tab_index
 local view_transition_x = -5
-local view_out_transition = ugui.transition.fly({ x = 5, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
+local view_out_transition = ugui.transition.fly({ x = 5, y = 0, duration = 0.1 })
 
-local main_paint_registered = false
-local main_paint_cleared = false
-local main_mouse_events = {}
-local main_key_events = {}
-local main_shift = false
-local function at_main_paint()
-    painter.current():clear({ r = 0, g = 0, b = 0, a = 0 })
-    if not Settings.mini_visualizer and not WorldVisualizer.is_enabled() then
-        main_mouse_events = {}
-        main_key_events = {}
-        main_paint_cleared = true
-        return
-    end
-
-    main_paint_cleared = false
-    painter.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
-    MainUgui.PREFERS_REDUCED_MOTION = Settings.animations == 'disabled'
-    local size = emu.main_window():size()
-    MainUgui.begin_frame({
-        mouse_position = emu.main_window():mouse_position(),
-        mouse_events = main_mouse_events,
-        key_events = main_key_events,
-        shift = main_shift,
-        window_size = size,
-        scale = math.max(0.01, MoreMaths.round(size.y / 600, 2)),
-    })
-    WorldVisualizer.draw()
-    MiniVisualizer.draw()
-    MainUgui.end_frame()
-    main_mouse_events = {}
-    main_key_events = {}
-end
-
-local function update_main_paint_registration()
-    local enabled = Settings.mini_visualizer or WorldVisualizer.is_enabled()
-    if not enabled then
-        if main_paint_registered and main_paint_cleared then
-            emu.main_window():atpaint(at_main_paint, true)
-            main_paint_registered = false
-            main_paint_cleared = false
-        end
-        return
-    end
-
-    main_paint_cleared = false
-    if main_paint_registered then
-        return
-    end
-
-    emu.main_window():atpaint(at_main_paint)
-    main_paint_registered = true
-end
-
-
-local function at_paint()
-    Drawing.resize_to_scale()
+local function atdrawd2d()
     ugui.PREFERS_REDUCED_MOTION = Settings.animations == 'disabled'
-    view_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+        or (Settings.animations == 'system' and emu.get_pref('reduced_motion'))
+    view_out_transition.duration = 0.1
     Styles.refresh_system_style()
-    painter.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
+    d2d.set_target_fps(emu.get_ff() and Settings.ff_fps or nil)
 
+    if d2d and d2d.clear then
+        d2d.clear(0, 0, 0, 0)
+    end
+
+    keys = input.get()
     G_KEYS = ugui.internal.deep_clone(keys)
 
     -- HACK: We turn off hotkeys while a control is capturing inputs
@@ -342,22 +290,31 @@ local function at_paint()
     VarWatch_update()
 
     ugui_environment = {
-        mouse_position = Drawing.window:mouse_position(),
+        mouse_position = {
+            x = keys.xmouse,
+            y = keys.ymouse,
+        },
         mouse_events = stored_mouse_events,
         key_events = key_events,
         shift = keys.shift,
         window_size = {
             x = Drawing.size.width,
-            y = Drawing.size.height,
+            y = Drawing.size.height - 23,
         },
         scale = Drawing.scale,
     }
     ugui.begin_frame(ugui_environment)
 
+    WorldVisualizer.draw()
+    MiniVisualizer.draw()
+    GhostTab_draw_ghost_overlay(
+        views[Settings.tab_index].name() == Locales.msg.SEMANTIC_WORKFLOW_TAB_NAME and 6 or 0
+    )
+
     BreitbandGraphics.fill_rectangle({
-        x = 0,
+        x = Drawing.initial_size.width,
         y = 0,
-        width = Drawing.size.width,
+        width = Drawing.size.width - Drawing.initial_size.width,
         height = Drawing.size.height,
     }, Styles.theme().background_color)
 
@@ -368,16 +325,14 @@ local function at_paint()
     if Settings.tab_index ~= previous_tab_index then
         local forward_distance = (Settings.tab_index - previous_tab_index) % #views
         view_transition_x = forward_distance <= #views / 2 and 10 or -10
-        view_out_transition.tick = ugui.transition.fly({ x = -view_transition_x, y = 0, duration = Settings.animations ==
-        'fast' and 0.1 or nil }).tick
+        view_out_transition.tick = ugui.transition.fly({ x = -view_transition_x, y = 0, duration = 0.1 }).tick
         previous_tab_index = Settings.tab_index
     end
 
     ugui.panel({
         uid = UID.ViewPanels + Settings.tab_index - 1,
         rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
-        in_transition = ugui.transition.fly({ x = view_transition_x, y = 0, duration = Settings.animations == 'fast' and
-        0.1 or nil }),
+        in_transition = ugui.transition.fly({ x = view_transition_x, y = 0, duration = 0.1 }),
         out_transition = view_out_transition,
     }, function()
         views[Settings.tab_index].draw()
@@ -393,7 +348,6 @@ local function at_paint()
     key_events = {}
 
     execute_defer_draw_queue()
-    update_main_paint_registration()
 end
 
 local function at_loadstate()
@@ -406,43 +360,18 @@ end
 emu.atloadstate(at_loadstate)
 emu.atinput(at_input)
 emu.atvi(at_vi)
-Drawing.window:atpaint(at_paint)
-
-update_main_paint_registration()
+emu.atdrawd2d(atdrawd2d)
 emu.atstop(function()
     Presets.save()
+    Drawing.size_down()
     BreitbandGraphics.free()
     ugui.free()
-    MainUgui.free()
 end)
 
-local function update_modifiers(args)
-    keys.control = args.ctrl
-    keys.alt = args.alt
-    keys.shift = args.shift
-    keys.meta = args.meta
-end
-
-Drawing.window:atmouse(function(args)
-    update_modifiers(args)
+emu.atmouse(function(args)
     stored_mouse_events[#stored_mouse_events + 1] = args
 end)
 
-Drawing.window:atkey(function(args)
-    update_modifiers(args)
+emu.atkey(function(args)
     key_events[#key_events + 1] = args
-end)
-
-emu.main_window():atmouse(function(args)
-    main_shift = args.shift
-    if Settings.mini_visualizer then
-        main_mouse_events[#main_mouse_events + 1] = args
-    end
-end)
-
-emu.main_window():atkey(function(args)
-    main_shift = args.shift
-    if Settings.mini_visualizer then
-        main_key_events[#main_key_events + 1] = args
-    end
 end)

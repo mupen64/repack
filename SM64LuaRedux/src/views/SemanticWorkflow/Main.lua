@@ -115,7 +115,7 @@ local Tabs = dofile(Redux.VIEWS_PATH .. 'SemanticWorkflow/Tabs.lua')
 local selected_tab_index = 1
 local previous_tab_index = selected_tab_index
 local tab_transition_x = 10
-local tab_out_transition = ugui.transition.fly({ x = -10, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil })
+local tab_out_transition = ugui.transition.fly({ x = -10, y = 0, duration = 0.1 })
 
 local function draw_factory(theme)
     local uid_counter = 0
@@ -212,15 +212,15 @@ return {
 
         if selected_tab_index ~= previous_tab_index then
             tab_transition_x = selected_tab_index > previous_tab_index and 10 or -10
-            tab_out_transition.tick = ugui.transition.fly({ x = -tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }).tick
+            tab_out_transition.tick = ugui.transition.fly({ x = -tab_transition_x, y = 0, duration = 0.1 }).tick
             previous_tab_index = selected_tab_index
         end
-        tab_out_transition.duration = Settings.animations == 'fast' and 0.1 or 0.25
+        tab_out_transition.duration = 0.1
 
         ugui.panel({
             uid = UID.TabPanels + selected_tab_index - 1,
             rectangle = { x = 0, y = 0, width = Drawing.size.width, height = Drawing.size.height },
-            in_transition = ugui.transition.fly({ x = tab_transition_x, y = 0, duration = Settings.animations == 'fast' and 0.1 or nil }),
+            in_transition = ugui.transition.fly({ x = tab_transition_x, y = 0, duration = 0.1 }),
             out_transition = tab_out_transition,
         }, function()
             Tabs[selected_tab_index].render(draw)

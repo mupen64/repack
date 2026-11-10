@@ -68,18 +68,18 @@ Styles.update_style = function()
 
     local theme = style.theme
 
-    for _, instance in ipairs({ ugui, MainUgui }) do
-        local mod_theme = instance.internal.deep_clone(theme)
-        instance.standard_styler.params = mod_theme
-        instance.standard_styler.params.tabcontrol.rail_size = grid_rect(0, 0, 0, 1).height
-        instance.standard_styler.params.tabcontrol.draw_frame = false
-        instance.standard_styler.params.tabcontrol.gap_x = Settings.grid_gap
-        instance.standard_styler.params.tabcontrol.gap_y = Settings.grid_gap
+    local mod_theme = ugui.internal.deep_clone(theme)
 
-        local prev_draw_icon = instance.standard_styler.draw_icon
-        instance.apply_nineslice(mod_theme)
-        instance.standard_styler.draw_icon = prev_draw_icon
-    end
+
+    ugui.standard_styler.params = mod_theme
+    ugui.standard_styler.params.tabcontrol.rail_size = grid_rect(0, 0, 0, 1).height
+    ugui.standard_styler.params.tabcontrol.draw_frame = false
+    ugui.standard_styler.params.tabcontrol.gap_x = Settings.grid_gap
+    ugui.standard_styler.params.tabcontrol.gap_y = Settings.grid_gap
+
+    local prev_draw_icon = ugui.standard_styler.draw_icon
+    ugui.apply_nineslice(mod_theme)
+    ugui.standard_styler.draw_icon = prev_draw_icon
 end
 
 Styles.refresh_system_style = function()

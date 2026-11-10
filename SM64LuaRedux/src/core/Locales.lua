@@ -150,7 +150,6 @@ Locales = {}
 ---@field public SETTINGS_VISUALS_ANIMATIONS string
 ---@field public SETTINGS_VISUALS_ANIMATIONS_SYSTEM string
 ---@field public SETTINGS_VISUALS_ANIMATIONS_ENABLED string
----@field public SETTINGS_VISUALS_ANIMATIONS_FAST string
 ---@field public SETTINGS_VISUALS_ANIMATIONS_DISABLED string
 ---@field public SETTINGS_VISUALS_FF_FPS string
 ---@field public SETTINGS_VISUALS_FF_FPS_TOOLTIP string

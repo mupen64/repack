@@ -5,7 +5,7 @@ This is a development version.
 ## ✨ Features
 
 - Changed notification system to use Mupen's native toasts.
-- Changed the script to be contained in a native Mupen window.
+- Changed animation behavior to have faster animations by default.
 - Added actions for tab cycling.
 
 ## ⚡ Performance
@@ -15,6 +15,7 @@ This is a development version.
 ## 🐞 Bugfixes
 
 - Fixed increment angle action not wrapping the angle correctly
+- Fixed "System" animation mode not respecting user preference
 
 # 7.0.0
 

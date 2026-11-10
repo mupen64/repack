@@ -117,7 +117,7 @@ local visual_items = {
     {
         text = function() return Locales.msg.SETTINGS_VISUALS_ANIMATIONS end,
         func = function(rect)
-            local modes = { 'system', 'enabled', 'fast', 'disabled' }
+            local modes = { 'system', 'enabled', 'disabled' }
             local selected_index = 1
             for i, mode in ipairs(modes) do
                 if Settings.animations == mode then
@@ -131,7 +131,6 @@ local visual_items = {
                 items = {
                     Locales.msg.SETTINGS_VISUALS_ANIMATIONS_SYSTEM,
                     Locales.msg.SETTINGS_VISUALS_ANIMATIONS_ENABLED,
-                    Locales.msg.SETTINGS_VISUALS_ANIMATIONS_FAST,
                     Locales.msg.SETTINGS_VISUALS_ANIMATIONS_DISABLED,
                 },
                 selected_index = selected_index,
@@ -293,7 +292,7 @@ local function draw_group(group, y, content_uid, separator_uid)
         ugui.panel({
             uid = content_uid,
             rectangle = { x = 0, y = 0, width = grid_rect(0, 0, content_grid_width(), 1).width, height = 0 },
-            transition = ugui.transition.fly({ x = 0, y = -5, duration = Settings.animations == 'fast' and 0.1 or nil }),
+            transition = ugui.transition.fly({ x = 0, y = -5, duration = 0.1 }),
         }, function()
             for item_index = 1, #group.items, 1 do
                 y = draw_setting_item(group.items[item_index], y, group.item_label_uid_base + item_index - 1)
