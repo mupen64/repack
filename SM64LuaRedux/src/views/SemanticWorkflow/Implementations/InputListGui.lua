@@ -244,7 +244,7 @@ local function handle_scroll_and_buttons(section_rect, button_draw_data, num_row
                     placing = input.joy[v.input] and -1 or 1
                     input.joy[v.input] = placing
                     any_change = true
-                elseif ugui.internal.environment.is_primary_down and placing ~= 0 then
+                elseif ugui.internal.is_primary_down and placing ~= 0 then
                     if in_range_x then
                         any_change = input.joy[v.input] ~= (placing == 1)
                         input.joy[v.input] = placing == 1
@@ -479,7 +479,7 @@ local function draw_sections_gui(sheet, draw, section_rect, button_draw_data)
                     end
                     input.editing = true
                     __impl.view_index = 1
-                elseif ugui.internal.environment.is_primary_down then
+                elseif ugui.internal.is_primary_down then
                     input.editing = true
                     __impl.view_index = 1
                 end
